@@ -6,5 +6,6 @@ public class Constants{
     companion object {
         const val TAG : String = "my_tag"
         const val APP = "YUSIC"
+        const val RC_SIGN_IN = 28657
     }
 }

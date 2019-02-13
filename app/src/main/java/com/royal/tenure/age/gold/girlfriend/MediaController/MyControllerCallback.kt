@@ -17,7 +17,6 @@ import com.royal.tenure.age.gold.girlfriend.R
 
 class MyControllerCallback(private val context: Context) : MediaControllerCompat.Callback(){
     val mContext = context as MainActivity
-
     var imageView : ImageView = mContext.findViewById<ImageView>(R.id.image)
     var textView : TextView = mContext.findViewById<TextView>(R.id.text_and_info)
     var playPause : ImageView = mContext.findViewById<ImageView>(R.id.play_pause)
@@ -44,17 +43,11 @@ class MyControllerCallback(private val context: Context) : MediaControllerCompat
             PlaybackStateCompat.STATE_PAUSED -> {
                 playPause.setImageDrawable(
                     ContextCompat.getDrawable(context,
-                        R.drawable.exo_controls_play
-                    )
-                )
-            }
+                        R.drawable.exo_controls_play)) }
             PlaybackStateCompat.STATE_PLAYING -> {
                 playPause.setImageDrawable(
                     ContextCompat.getDrawable(context,
-                        R.drawable.exo_controls_pause
-                    )
-                )
-            }
+                        R.drawable.exo_controls_pause)) }
             else -> null
         }
 
