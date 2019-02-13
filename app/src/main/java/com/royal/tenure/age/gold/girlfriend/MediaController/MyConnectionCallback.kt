@@ -55,24 +55,15 @@ class MyConnectionCallback(private val context: Context,
         val mediaController = MediaControllerCompat.getMediaController(context as MainActivity)
         playPause = context.findViewById<ImageView>(R.id.play_pause).apply {
 
+
             setOnClickListener {
                 var pbState = mediaController.playbackState.state
                 when(pbState){
                     PlaybackStateCompat.STATE_PLAYING -> {
                         mediaController.transportControls.pause()
-                        playPause.setImageDrawable(
-                            ContextCompat.getDrawable(context,
-                                R.drawable.exo_controls_play
-                            )
-                        )
                     }
                     PlaybackStateCompat.STATE_PAUSED -> {
                         mediaController.transportControls.play()
-                        playPause.setImageDrawable(
-                            ContextCompat.getDrawable(context,
-                                R.drawable.exo_controls_pause
-                            )
-                        )
                     }
                     else -> { } } } }.also { it.setVisibility(View.INVISIBLE) }
     }

@@ -25,7 +25,19 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                          private val exoPlayer: ExoPlayer,
                          private val context: Context) : MediaSessionConnector.PlaybackPreparer, MyListener {
 
-    override fun onSuccess() {
+    init {
+        exoPlayer.addListener(object : Player.EventListener{
+            override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                Log.e(Constants.TAG, "playbackState: " + playbackState)
+
+                if(playbackState == Player.STATE_READY){
+                    mediaSession.setMetadata(mMediaMetadata)
+                }
+            }
+        })
+    }
+
+    override fun createdPlaybackState() {
 
     }
 
@@ -41,7 +53,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
         caller.registerListener(this)
     }
 
-    override fun somethingHappened() {
+    override fun createdMediaMetadata() {
         state = true
 
         val mediaUri: Uri = Uri.parse(mMediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI))
@@ -50,15 +62,6 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
         exoPlayer.prepare(videoSource)
 
         exoPlayer.seekTo(mBundle!!.getLong("position"))
-
-        exoPlayer.addListener(object : Player.EventListener{
-            override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                Log.e(Constants.TAG, "playbackState: " + playbackState)
-                if(playbackState == Player.STATE_READY){
-                    mediaSession.setMetadata(mMediaMetadata)
-                }
-            }
-        })
 
     }
 
@@ -91,13 +94,17 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                     MediaMetadataCompat.Builder()
                         .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, source)
                         .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap)
-                        .putString(MediaMetadataCompat.METADATA_KEY_COMPOSER, creator)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, creator)
                         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
                         .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, mediaId)
                         .build()
 
                 caller.notifySomethingHappened()
             }
+    }
+
+    fun createPlaybackState(){
+
     }
 
     override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
@@ -117,9 +124,9 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 }
 
 interface MyListener {
-    fun somethingHappened()
+    fun createdMediaMetadata()
 
-    fun onSuccess()
+    fun createdPlaybackState()
 }
 
 class Caller {
@@ -131,13 +138,13 @@ class Caller {
 
     fun notifySomethingHappened() {
         for (listener in listeners) {
-            listener.somethingHappened()
+            listener.createdMediaMetadata()
         }
     }
 
     fun notifyOnSuccess(){
         for (listener in listeners) {
-            listener.onSuccess()
+            listener.createdPlaybackState()
         }
     }
 }

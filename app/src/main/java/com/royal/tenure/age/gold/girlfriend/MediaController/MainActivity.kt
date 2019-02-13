@@ -47,12 +47,14 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        mMediaBrowserCompat.connect()
+        if(mMediaBrowserCompat.isConnected != true){
+            mMediaBrowserCompat.connect()
+        }
+
 
     }
 
     override fun onStop() {
         super.onStop()
-        mMediaBrowserCompat.disconnect()
     }
 }

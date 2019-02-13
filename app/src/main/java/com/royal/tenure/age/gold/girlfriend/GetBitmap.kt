@@ -24,9 +24,8 @@ class GetBitmap(private val context: Context) : AsyncTask<String, Void, Bitmap>(
             val bitmapOptions = BitmapFactory.Options()
             bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888
             val bitmap = BitmapFactory.decodeStream(inputStream, null, bitmapOptions)
-            val resizedBitmap: Bitmap = Bitmap.createBitmap(bitmap, 0, 0, 400, 400)
 
-            return resizedBitmap
+            return bitmap
 
         } catch (e: IOException){
             return null

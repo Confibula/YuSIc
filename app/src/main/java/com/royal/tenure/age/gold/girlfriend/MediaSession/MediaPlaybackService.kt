@@ -30,18 +30,20 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         MyEventListener(mExoPlayer, mMediaSessionCompat)
     }
 
+    // Todo:
+    // do something with all these uninitialized variables!
     private val notificationBuilder : NotificationCompat.Builder by lazy {
         NotificationCompat.Builder(this, Constants.APP)
     }
+    private lateinit var mController : MediaControllerCompat
+    private lateinit var mMediaMetadata : MediaMetadataCompat
+    private lateinit var mDescription : MediaDescriptionCompat
 
     private lateinit var mMediaSessionCompat : MediaSessionCompat
     private lateinit var mMediaSessionConnector: MediaSessionConnector
     private lateinit var mPlayBackPreparer : MediaSessionConnector.PlaybackPreparer
     private lateinit var mDefaultDataSourceFactory: DefaultDataSourceFactory
     private lateinit var mPlaybackController: MediaSessionConnector.PlaybackController
-    private lateinit var mController : MediaControllerCompat
-    private lateinit var mMediaMetadata : MediaMetadataCompat
-    private lateinit var mDescription : MediaDescriptionCompat
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return super.onStartCommand(intent, flags, startId)
