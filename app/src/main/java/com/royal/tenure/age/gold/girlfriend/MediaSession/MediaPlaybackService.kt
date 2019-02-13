@@ -69,7 +69,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 MyPlayBackPreparer(
                     mMediaSessionCompat,
                     mDefaultDataSourceFactory,
-                    mExoPlayer
+                    mExoPlayer,
+                    this
                 )
 
             mExoPlayer.addListener(mPlayerEventListener)

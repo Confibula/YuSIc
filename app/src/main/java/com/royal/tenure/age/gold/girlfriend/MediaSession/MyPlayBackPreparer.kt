@@ -1,5 +1,6 @@
 package com.royal.tenure.age.gold.girlfriend.MediaSession
 
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.os.ResultReceiver
@@ -21,7 +22,8 @@ import java.io.IOException
 
 class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                          private val dataFactory: DefaultDataSourceFactory,
-                         private val exoPlayer: ExoPlayer) : MediaSessionConnector.PlaybackPreparer, MyListener {
+                         private val exoPlayer: ExoPlayer,
+                         private val context: Context) : MediaSessionConnector.PlaybackPreparer, MyListener {
 
     override fun onSuccess() {
 
@@ -80,7 +82,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
             .get().addOnSuccessListener { document ->
                 val value: Map<String, Any> = document.data!!
 
-                val bitmap = GetBitmap().execute(value.get("image") as String).get()
+                val bitmap = GetBitmap(context).execute(value.get("image") as String).get()
                 val source = value.get("source") as String
                 val creator = value.get("creator") as String
                 val title = value.get("title") as String

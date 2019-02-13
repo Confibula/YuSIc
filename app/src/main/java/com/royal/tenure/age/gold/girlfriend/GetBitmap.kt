@@ -1,5 +1,6 @@
 package com.royal.tenure.age.gold.girlfriend
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.AsyncTask
@@ -10,7 +11,7 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-class GetBitmap : AsyncTask<String, Void, Bitmap>(){
+class GetBitmap(private val context: Context) : AsyncTask<String, Void, Bitmap>(){
     override fun doInBackground(vararg bitmapUri: String?): Bitmap? {
         var inputStream: InputStream? = null
 
@@ -23,8 +24,9 @@ class GetBitmap : AsyncTask<String, Void, Bitmap>(){
             val bitmapOptions = BitmapFactory.Options()
             bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888
             val bitmap = BitmapFactory.decodeStream(inputStream, null, bitmapOptions)
+            val resizedBitmap: Bitmap = Bitmap.createBitmap(bitmap, 0, 0, 400, 400)
 
-            return bitmap
+            return resizedBitmap
 
         } catch (e: IOException){
             return null

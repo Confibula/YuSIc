@@ -16,9 +16,12 @@
             android:layout_height="match_parent"/>
 
     <TextView
+            android:layout_marginTop="8dp"
+            android:textSize="16dp"
+            android:textColor="@color/colorPrimaryDark"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:gravity="center"
+            android:gravity="center_horizontal"
             android:id="@+id/text_and_info"/>
 
 </FrameLayout>
