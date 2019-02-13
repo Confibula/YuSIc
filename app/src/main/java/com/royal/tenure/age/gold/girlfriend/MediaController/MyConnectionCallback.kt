@@ -34,7 +34,7 @@ class MyConnectionCallback(private val context: Context,
             val bundle: Bundle = Bundle().also {
                 it.putLong("position", 0)
             }
-            mMediaController.transportControls.prepareFromMediaId("3", bundle)
+            mMediaController.transportControls.prepareFromMediaId("1", bundle)
 
             buildPlayPause()
             val mediaController = MediaControllerCompat.getMediaController(context as MainActivity)

@@ -48,7 +48,6 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
 
         mMediaBrowserCompat.connect()
-        Log.e(Constants.TAG, "ran onStart on MainActivity")
 
     }
 

@@ -6,6 +6,7 @@ import android.os.*
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.media.MediaBrowserServiceCompat
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
@@ -21,9 +22,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private val mExoPlayer : ExoPlayer by lazy {
         ExoPlayerFactory.newSimpleInstance(this)
     }
+
     private val mPlayerEventListener : MyEventListener by lazy {
         MyEventListener(mExoPlayer, mMediaSessionCompat)
     }
+
     private lateinit var mMediaSessionCompat : MediaSessionCompat
     private lateinit var mMediaSessionConnector: MediaSessionConnector
     private lateinit var mPlayBackPreparer : MediaSessionConnector.PlaybackPreparer
@@ -80,18 +83,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onLoadItem(itemId: String?, result: Result<MediaBrowserCompat.MediaItem>) {
         super.onLoadItem(itemId, result)
-
-        //result.sendResult()
     }
 
     override fun onLoadChildren(p0: String, p1: Result<MutableList<MediaBrowserCompat.MediaItem>>) {
-        Log.e(Constants.TAG, "returned a list of children")
+
     }
 
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? {
-        Log.e(Constants.TAG, "returned a browserRoot")
-
         return BrowserRoot(Constants.APP, null)
-    }
 
+    }
 }

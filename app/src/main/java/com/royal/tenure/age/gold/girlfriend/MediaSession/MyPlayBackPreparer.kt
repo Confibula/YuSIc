@@ -23,6 +23,10 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                          private val dataFactory: DefaultDataSourceFactory,
                          private val exoPlayer: ExoPlayer) : MediaSessionConnector.PlaybackPreparer, MyListener {
 
+    override fun onSuccess() {
+
+    }
+
     var state : Boolean = false
     lateinit var mMediaId : String
     lateinit var mMediaMetadata : MediaMetadataCompat
@@ -44,9 +48,16 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
         exoPlayer.prepare(videoSource)
 
         exoPlayer.seekTo(mBundle!!.getLong("position"))
-        mediaSession.setMetadata(mMediaMetadata)
 
-        Log.e(Constants.TAG, "state changed to true, and now the media can be prepared")
+        exoPlayer.addListener(object : Player.EventListener{
+            override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                Log.e(Constants.TAG, "playbackState: " + playbackState)
+                if(playbackState == Player.STATE_READY){
+                    mediaSession.setMetadata(mMediaMetadata)
+                }
+            }
+        })
+
     }
 
     override fun onPrepareFromSearch(query: String?, extras: Bundle?) = Unit
@@ -80,6 +91,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                         .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap)
                         .putString(MediaMetadataCompat.METADATA_KEY_COMPOSER, creator)
                         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                        .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, mediaId)
                         .build()
 
                 caller.notifySomethingHappened()
@@ -88,20 +100,9 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
     override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
 
-        // Todo: slow response
-        // right now the app runs slowly when mediaItem is fetched since there is so much load!
-        // find a way to reduce to load, or load more intelligently
-
-        // Todo: efficiency
-        // Creating the MediaMetadata could be run in the onCreate instead. This would make your app run faster.
-        // Its shouldn't need to be created here, when the user wants to play the media. It can be created earlier.
-        // Read more about custom callbacks!
-
         mMediaId = mediaId!!
         mBundle = extras!!
         createMediaMetadata(mediaId!!)
-
-        Log.e(Constants.TAG, "exoplayer's state is: " + exoPlayer.playbackState.toString())
     }
 
     override fun onPrepareFromUri(uri: Uri?, extras: Bundle?) = Unit
@@ -115,6 +116,8 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
 interface MyListener {
     fun somethingHappened()
+
+    fun onSuccess()
 }
 
 class Caller {
@@ -127,6 +130,12 @@ class Caller {
     fun notifySomethingHappened() {
         for (listener in listeners) {
             listener.somethingHappened()
+        }
+    }
+
+    fun notifyOnSuccess(){
+        for (listener in listeners) {
+            listener.onSuccess()
         }
     }
 }

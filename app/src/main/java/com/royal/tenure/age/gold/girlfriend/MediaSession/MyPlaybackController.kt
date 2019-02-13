@@ -16,22 +16,17 @@ class MyPlaybackController: MediaSessionConnector.PlaybackController{
     override fun onCommand(player: Player?, command: String?, extras: Bundle?, cb: ResultReceiver?) = Unit
 
     override fun onPause(player: Player?) {
-        Log.e(Constants.TAG, "ran onPause. Song duration: " + player!!.duration)
         player!!.setPlayWhenReady(false)
-
     }
 
     override fun onFastForward(player: Player?) = Unit
 
     override fun onPlay(player: Player?) {
-        Log.e(Constants.TAG, "ran onPlay")
         player!!.setPlayWhenReady(true)
     }
 
     override fun onStop(player: Player?) {
-        Log.e(Constants.TAG, "onStop ran")
     }
-
 
     override fun onSetShuffleMode(player: Player?, shuffleMode: Int) = Unit
 
