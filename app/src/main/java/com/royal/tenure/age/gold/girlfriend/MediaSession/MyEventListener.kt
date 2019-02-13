@@ -6,6 +6,7 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.util.Log
 import com.royal.tenure.age.gold.girlfriend.Constants
+import java.io.IOException
 
 class MyEventListener(private val exoPlayer: ExoPlayer,
                       private val mediaSession: MediaSessionCompat): Player.EventListener{
@@ -25,7 +26,11 @@ class MyEventListener(private val exoPlayer: ExoPlayer,
             var nextIdAsString = Integer.toString(nextId)
             var finalId = nextIdAsString
 
-            mediaSession.controller.transportControls.playFromMediaId(finalId, null)
+            try{
+                mediaSession.controller.transportControls.playFromMediaId(finalId, null)
+            } catch (e: IOException){
+                Log.e(Constants.TAG, "Reached the end of the music stream: " + e)
+            }
         }
     }
 }

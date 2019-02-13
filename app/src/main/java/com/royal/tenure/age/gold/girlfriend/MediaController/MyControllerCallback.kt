@@ -25,10 +25,11 @@ class MyControllerCallback(private val context: Context) : MediaControllerCompat
 
         if(metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID) != null){
             val title : String = metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
+            val creator: String = metadata.getString(MediaMetadataCompat.METADATA_KEY_COMPOSER)
             val bitmap : Bitmap = metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
 
             imageView.setImageBitmap(bitmap)
-            textView.setText(title)
+            textView.setText(title + "\n" + creator)
             playPause.setVisibility(View.VISIBLE)
         }
 

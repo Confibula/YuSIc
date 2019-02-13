@@ -4,9 +4,12 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.os.*
 import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.core.app.NotificationCompat
 import androidx.media.MediaBrowserServiceCompat
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
@@ -27,11 +30,18 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         MyEventListener(mExoPlayer, mMediaSessionCompat)
     }
 
+    private val notificationBuilder : NotificationCompat.Builder by lazy {
+        NotificationCompat.Builder(this, Constants.APP)
+    }
+
     private lateinit var mMediaSessionCompat : MediaSessionCompat
     private lateinit var mMediaSessionConnector: MediaSessionConnector
     private lateinit var mPlayBackPreparer : MediaSessionConnector.PlaybackPreparer
     private lateinit var mDefaultDataSourceFactory: DefaultDataSourceFactory
     private lateinit var mPlaybackController: MediaSessionConnector.PlaybackController
+    private lateinit var mController : MediaControllerCompat
+    private lateinit var mMediaMetadata : MediaMetadataCompat
+    private lateinit var mDescription : MediaDescriptionCompat
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return super.onStartCommand(intent, flags, startId)
