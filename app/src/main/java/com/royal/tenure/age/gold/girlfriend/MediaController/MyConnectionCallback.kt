@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -73,6 +74,6 @@ class MyConnectionCallback(private val context: Context,
                             )
                         )
                     }
-                    else -> { } } } }
+                    else -> { } } } }.also { it.setVisibility(View.INVISIBLE) }
     }
 }

@@ -8,6 +8,7 @@ import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import com.royal.tenure.age.gold.girlfriend.Constants
@@ -16,20 +17,19 @@ import com.royal.tenure.age.gold.girlfriend.R
 class MyControllerCallback(private val context: Context) : MediaControllerCompat.Callback(){
     override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
 
-        Log.e(Constants.TAG, "Metadata changed to: " + metadata!!.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
-
-        // Todo: showcase metadata
-        // Take the metadata from the session and showcase it
-
         val mContext = context as MainActivity
+
         var imageView : ImageView = mContext.findViewById<ImageView>(R.id.image)
         var textView : TextView = mContext.findViewById<TextView>(R.id.text_and_info)
+        var playPause : ImageView = mContext.findViewById<ImageView>(R.id.play_pause)
 
-        if(metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID) != null){
+        if(metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID) != null){
             val title : String = metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
             val bitmap : Bitmap = metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
+
             imageView.setImageBitmap(bitmap)
             textView.setText(title)
+            playPause.setVisibility(View.VISIBLE)
         }
 
         super.onMetadataChanged(metadata)
