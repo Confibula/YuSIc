@@ -1,0 +1,52 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:dist="http://schemas.android.com/apk/distribution"
+          package="com.royal.tenure.age.gold.girlfriend">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <dist:module
+            dist:instant="true"/>
+    <application android:allowBackup="true"
+                 android:label="@string/app_name"
+                 android:icon="@mipmap/ic_launcher"
+                 android:roundIcon="@mipmap/ic_launcher_round"
+                 android:supportsRtl="true"
+                 android:theme="@style/AppTheme">
+        <activity android:name=".MediaController.MainActivity"
+                  android:configChanges="orientation">
+            <intent-filter android:order="1">
+                <action android:name="android.intent.action.VIEW"/>
+
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+
+                <data
+                        android:host="nano.ledger.rollover.trademark.com"
+                        android:pathPattern="/.*"
+                        android:scheme="https"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <service android:name=".MediaSession.MediaPlaybackService">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
+        <service android:name=".BandWidthService"
+                 android:permission="android.permission.BIND_JOB_SERVICE" >
+
+        </service>
+
+        <receiver android:name=".BecomingNoisyReceiver">
+            <intent-filter>
+                <action android:name="android.media.AUDIO_BECOMING_NOISY"></action>
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

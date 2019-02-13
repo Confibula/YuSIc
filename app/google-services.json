@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "639083721163",
+    "firebase_url": "https://yusic-eca9b.firebaseio.com",
+    "project_id": "yusic-eca9b",
+    "storage_bucket": "yusic-eca9b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:639083721163:android:002eeca398029e76",
+        "android_client_info": {
+          "package_name": "com.royal.tenure.age.gold.girlfriend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "639083721163-lhil57uba4khmqjhmqi3g574s9ksf7o5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk7NnnniF82-FzsMZrwboTlgCdhmKLHFw"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
