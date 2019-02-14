@@ -46,6 +46,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.e(Constants.TAG, "created MediaBrowserService")
 
         val sessionIntent = packageManager?.getLaunchIntentForPackage(packageName)
         val sessionActivityPendingIntent = PendingIntent.getActivity(this, 0, sessionIntent, 0)

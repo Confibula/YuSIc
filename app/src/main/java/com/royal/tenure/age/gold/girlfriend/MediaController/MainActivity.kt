@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
 
     // Todo: general
     // Create a Queue for the mediaSession to allow skipping forward or backwards in the stream
-    
+
     // Also do create a list of different streams. I'm fairly certain this code will revolve around
     // communication between the BrowserService and Browser my way of mediaChildren and root nodes.
 
@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(com.royal.tenure.age.gold.girlfriend.R.layout.activity_main)
+        setContentView(R.layout.activity_main)
 
         mMediaBrowserCompat = MediaBrowserCompat(this,
             ComponentName(this, MediaPlaybackService::class.java),
@@ -106,15 +106,16 @@ class MainActivity : AppCompatActivity() {
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
         auth = FirebaseAuth.getInstance()
 
+        user = auth.currentUser
+
     }
 
     override fun onStart() {
         super.onStart()
 
-        user = auth.currentUser
-        if(user != null)
-            if(mMediaBrowserCompat.isConnected != true)
-                mMediaBrowserCompat.connect()
+        if(user != null) {
+            if (mMediaBrowserCompat.isConnected != true) mMediaBrowserCompat.connect()
+        }
         else signIn()
     }
 

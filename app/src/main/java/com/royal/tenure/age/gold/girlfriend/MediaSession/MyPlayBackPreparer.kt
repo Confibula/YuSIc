@@ -37,6 +37,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
     }
 
     init {
+
         exoPlayer.addListener(object : Player.EventListener{
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                 Log.e(Constants.TAG, "playbackState: " + playbackState)
@@ -88,9 +89,9 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
     override fun getCommands(): Array<String>? = null
 
-    fun createMediaMetadata(mediaId: String) {
+    fun createSleepMediaMetadata(mediaId: String) {
 
-        db.collection("songs")
+        db.collection("sleep")
             .document(mediaId!!)
             .get().addOnSuccessListener { document ->
                 val value: Map<String, Any> = document.data!!
@@ -121,7 +122,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
         mMediaId = mediaId!!
         mBundle = extras!!
-        createMediaMetadata(mediaId!!)
+        createSleepMediaMetadata(mediaId!!)
     }
 
     override fun onPrepareFromUri(uri: Uri?, extras: Bundle?) = Unit
