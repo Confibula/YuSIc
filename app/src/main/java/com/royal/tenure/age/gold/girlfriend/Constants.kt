@@ -7,5 +7,7 @@ public class Constants{
         const val TAG : String = "my_tag"
         const val APP = "YUSIC"
         const val RC_SIGN_IN = 28657
+        const val NOTIFICATION_ID = 10946
+        const val NOTIFICATION_CHANNEL = "6765"
     }
 }

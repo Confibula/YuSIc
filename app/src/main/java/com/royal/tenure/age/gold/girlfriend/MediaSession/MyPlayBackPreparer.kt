@@ -20,6 +20,7 @@ import com.royal.tenure.age.gold.girlfriend.GetBitmap
 import java.io.IOException
 
 
+
 class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                          private val dataFactory: DefaultDataSourceFactory,
                          private val exoPlayer: ExoPlayer,
@@ -40,7 +41,6 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
         exoPlayer.addListener(object : Player.EventListener{
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                Log.e(Constants.TAG, "playbackState: " + playbackState)
 
                 if(playbackState == Player.STATE_READY){
                     mediaSession.setMetadata(mMediaMetadata)
@@ -55,6 +55,9 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                     try{
                         mediaSession.controller.transportControls.playFromMediaId(finalId, null)
                     } catch (e: IOException){
+
+                        // Todo: reached end of stream
+                        // What do do when the stream reached the end?
                         Log.e(Constants.TAG, "Reached the end of the music stream: " + e)
                     }
                 }
@@ -110,7 +113,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                         .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, mediaId)
                         .build()
 
-                caller.notifySomethingHappened()
+                caller.notifyCreatedMediaMetadata()
             }
     }
 
@@ -147,14 +150,13 @@ class Caller {
         listeners.add(listener)
     }
 
-    fun notifySomethingHappened() {
+    fun notifyCreatedMediaMetadata() {
         for (listener in listeners) {
             listener.createdMediaMetadata()
         }
     }
 
-    fun notifyOnSuccess(){
+    fun notifyCreatedPlaybackState(){
         for (listener in listeners) {
-            listener.createdPlaybackState()
-        } }
+            listener.createdPlaybackState() } }
 }

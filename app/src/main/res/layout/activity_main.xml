@@ -10,20 +10,27 @@
                android:layout_height="match_parent"/>
 
     <ImageView
-            android:visibility="invisible"
+            android:visibility="visible"
             android:id="@+id/play_pause"
             android:src="@drawable/exo_controls_play"
-            android:padding="50dp"
+            android:padding="89dp"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 
     <TextView
-            android:layout_marginTop="8dp"
-            android:textSize="16dp"
+            android:layout_marginTop="13dp"
+            android:textSize="18dp"
             android:textColor="@color/colorPrimaryDark"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center_horizontal"
             android:id="@+id/text_and_info"/>
+
+    <TextView android:layout_width="wrap_content"
+              android:textSize="21dp"
+              android:textColor="@color/colorPrimaryDark"
+              android:gravity="center"
+              android:id="@+id/title_when_started"
+              android:layout_height="wrap_content"/>
 
 </FrameLayout>
