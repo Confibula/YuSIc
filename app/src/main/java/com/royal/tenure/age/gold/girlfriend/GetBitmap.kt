@@ -30,7 +30,7 @@ class GetBitmap(private val context: Context) : AsyncTask<String, Void, Bitmap>(
         } catch (e: IOException){
             return null
         } finally {
-            inputStream!!.close()
+            inputStream?.close()
         }
     }
 

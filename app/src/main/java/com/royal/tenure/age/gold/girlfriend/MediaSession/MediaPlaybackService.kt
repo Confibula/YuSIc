@@ -26,12 +26,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         ExoPlayerFactory.newSimpleInstance(this)
     }
 
-    private val mPlayerEventListener : MyEventListener by lazy {
-        MyEventListener(mExoPlayer, mMediaSessionCompat)
-    }
-
-    // Todo:
-    // do something with all these uninitialized variables!
+    // Todo: create notification
     private val notificationBuilder : NotificationCompat.Builder by lazy {
         NotificationCompat.Builder(this, Constants.APP)
     }
@@ -84,8 +79,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     mExoPlayer,
                     this
                 )
-
-            mExoPlayer.addListener(mPlayerEventListener)
 
             it.setPlayer(mExoPlayer, mPlayBackPreparer)
         }

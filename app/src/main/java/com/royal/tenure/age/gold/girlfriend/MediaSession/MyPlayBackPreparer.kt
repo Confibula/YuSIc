@@ -25,23 +25,6 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                          private val exoPlayer: ExoPlayer,
                          private val context: Context) : MediaSessionConnector.PlaybackPreparer, MyListener {
 
-    init {
-        exoPlayer.addListener(object : Player.EventListener{
-            override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                Log.e(Constants.TAG, "playbackState: " + playbackState)
-
-                if(playbackState == Player.STATE_READY){
-                    mediaSession.setMetadata(mMediaMetadata)
-                }
-            }
-        })
-    }
-
-    override fun createdPlaybackState() {
-
-    }
-
-    var state : Boolean = false
     lateinit var mMediaId : String
     lateinit var mMediaMetadata : MediaMetadataCompat
     lateinit var mBundle: Bundle
@@ -53,14 +36,41 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
         caller.registerListener(this)
     }
 
-    override fun createdMediaMetadata() {
-        state = true
+    init {
+        exoPlayer.addListener(object : Player.EventListener{
+            override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                Log.e(Constants.TAG, "playbackState: " + playbackState)
 
+                if(playbackState == Player.STATE_READY){
+                    mediaSession.setMetadata(mMediaMetadata)
+                }
+
+                if(playbackState == Player.STATE_ENDED){
+                    var id = mediaSession.controller.metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
+                    var nextId = Integer.parseInt(id) + 1
+                    var nextIdAsString = Integer.toString(nextId)
+                    var finalId = nextIdAsString
+
+                    try{
+                        mediaSession.controller.transportControls.playFromMediaId(finalId, null)
+                    } catch (e: IOException){
+                        Log.e(Constants.TAG, "Reached the end of the music stream: " + e)
+                    }
+                }
+            }
+        })
+    }
+
+    override fun createdPlaybackState() {
+
+    }
+
+    override fun createdMediaMetadata() {
         val mediaUri: Uri = Uri.parse(mMediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI))
         val videoSource = ExtractorMediaSource.Factory(dataFactory)
             .createMediaSource(mediaUri)
-        exoPlayer.prepare(videoSource)
 
+        exoPlayer.prepare(videoSource)
         exoPlayer.seekTo(mBundle!!.getLong("position"))
 
     }
@@ -145,6 +155,5 @@ class Caller {
     fun notifyOnSuccess(){
         for (listener in listeners) {
             listener.createdPlaybackState()
-        }
-    }
+        } }
 }
