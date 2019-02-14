@@ -58,15 +58,13 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             //setContentIntent(mController.sessionActivity)
             setSmallIcon(R.drawable.exo_notification_small_icon)
             setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            setDefaults(NotificationCompat.DEFAULT_ALL)
 
             // Creating the channel
             val name = getString(R.string.adjust)
             val descriptionText = getString(R.string.description)
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val importance = NotificationManager.IMPORTANCE_LOW
             val mChannel = NotificationChannel(Constants.NOTIFICATION_CHANNEL, name, importance)
             mChannel.description = descriptionText
-            mChannel.setSound(null, null)
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(mChannel)
             setChannelId(mChannel.id)
@@ -157,8 +155,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         @RequiresApi(Build.VERSION_CODES.O)
 
         lateinit var metaData : MediaMetadataCompat
-        var needsBuild: Boolean = true
-        var needsForeground : Boolean = true
 
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(state)
@@ -167,15 +163,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             when(state?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
                     metaData = mController.metadata
-                    if (needsForeground){
-                        startForeground(Constants.NOTIFICATION_ID, buildNotification())
-                        needsForeground = false
-                    }
-                    else { }
+                    startForeground(Constants.NOTIFICATION_ID, buildNotification())
                 }
                 else -> {
-                    if(!needsForeground) stopForeground(false)
-                    needsForeground = true
+                    stopForeground(false)
                 }
             }
         }

@@ -68,10 +68,10 @@ class MainActivity : AppCompatActivity() {
                 val creator: String = metadata!!.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)
                 val bitmap : Bitmap = metadata!!.getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
 
+                titleWhenStarted.setVisibility(View.INVISIBLE)
                 imageView.setImageBitmap(bitmap)
                 textView.setText(title + "\n" + creator)
                 playPause.setVisibility(View.VISIBLE)
-                titleWhenStarted.setVisibility(View.INVISIBLE)
 
                 streamPosition = id
             }
