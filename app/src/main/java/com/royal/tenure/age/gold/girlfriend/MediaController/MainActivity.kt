@@ -58,8 +58,7 @@ class MainActivity : AppCompatActivity() {
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             var imageView : ImageView = findViewById<ImageView>(R.id.image)
             var textView : TextView = findViewById<TextView>(R.id.text_and_info)
-            var playPause : ImageView = findViewById<ImageView>(R.id.play_pause)
-            var titleWhenStarted : TextView = findViewById(R.id.title_when_started)
+            playPause = findViewById<ImageView>(R.id.play_pause)
 
             var id : String? = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
 
@@ -68,7 +67,6 @@ class MainActivity : AppCompatActivity() {
                 val creator: String = metadata!!.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)
                 val bitmap : Bitmap = metadata!!.getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
 
-                titleWhenStarted.setVisibility(View.INVISIBLE)
                 imageView.setImageBitmap(bitmap)
                 textView.setText(title + "\n" + creator)
                 playPause.setVisibility(View.VISIBLE)
@@ -82,20 +80,20 @@ class MainActivity : AppCompatActivity() {
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             playPosition = state?.position!!
 
+            val whenUserLeftData = HashMap<String, Any?>()
+            whenUserLeftData["playPosition"] = playPosition
+            whenUserLeftData["streamPosition"] = streamPosition
+            db.collection("users")
+                .document(auth.currentUser!!.uid)
+                .set(whenUserLeftData)
+
             when(state!!.state){
                 PlaybackStateCompat.STATE_PAUSED -> {
                     playPause.setImageDrawable(
                         ContextCompat.getDrawable(this@MainActivity,
                             R.drawable.exo_controls_play))
-
-                    val whenUserLeftData = HashMap<String, Any?>()
-                    whenUserLeftData["playPosition"] = playPosition
-                    whenUserLeftData["streamPosition"] = streamPosition
-                    db.collection("users")
-                        .document(auth.currentUser!!.uid)
-                        .set(whenUserLeftData)
-
                 }
+
                 PlaybackStateCompat.STATE_PLAYING -> {
                     playPause.setImageDrawable(
                         ContextCompat.getDrawable(this@MainActivity,
@@ -135,6 +133,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 mMediaController.transportControls.prepareFromMediaId(streamPosition, bundle)
 
+                var titleWhenStarted : TextView = findViewById(R.id.title_when_started)
+                titleWhenStarted.setVisibility(View.INVISIBLE)
+
                 buildPlayPause()
                 mMediaController.registerCallback(mControllerCallback)
             }
@@ -157,6 +158,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -167,7 +171,6 @@ class MainActivity : AppCompatActivity() {
             ComponentName(this, MediaPlaybackService::class.java),
             mConnectionCallback,
             null)
-
 
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.server_id))

@@ -58,6 +58,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             //setContentIntent(mController.sessionActivity)
             setSmallIcon(R.drawable.exo_notification_small_icon)
             setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            setOnlyAlertOnce(true)
 
             // Creating the channel
             val name = getString(R.string.adjust)
@@ -173,7 +174,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         fun buildNotification(): Notification{
             val mNotification = notificationBuilder.apply {
                 val bitmap = metaData.getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
-
                 setContentTitle(metaData.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
                 setContentText(metaData.getString(MediaMetadataCompat.METADATA_KEY_ARTIST))
                 setLargeIcon(bitmap)
