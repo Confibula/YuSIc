@@ -54,7 +54,9 @@ class MainActivity : AppCompatActivity() {
             var textView : TextView = findViewById<TextView>(R.id.text_and_info)
             playPause = findViewById<ImageView>(R.id.play_pause)
 
-            streamPosition = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)?.apply {
+            streamPosition = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID).takeIf {
+                it != null
+            }?.apply {
                 val title : String = metadata!!.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
                 val creator: String = metadata!!.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)
                 val bitmap : Bitmap = metadata!!.getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
@@ -63,6 +65,7 @@ class MainActivity : AppCompatActivity() {
                 textView.setText(title + "\n" + creator)
                 playPause.setVisibility(View.VISIBLE)
             }
+
             super.onMetadataChanged(metadata)
         }
 
