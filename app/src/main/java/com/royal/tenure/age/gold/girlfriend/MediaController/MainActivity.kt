@@ -54,9 +54,11 @@ class MainActivity : AppCompatActivity() {
             var textView : TextView = findViewById<TextView>(R.id.text_and_info)
             playPause = findViewById<ImageView>(R.id.play_pause)
 
-            streamPosition = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID).takeIf {
+            val id = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID).takeIf {
                 it != null
             }?.apply {
+                streamPosition = this
+                Log.e(Constants.TAG, "streamPosition is: " + this)
                 val title : String = metadata!!.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
                 val creator: String = metadata!!.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)
                 val bitmap : Bitmap = metadata!!.getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
@@ -229,5 +231,9 @@ class MainActivity : AppCompatActivity() {
         mediaBrowser.disconnect()
         stopService(Intent(this, MediaPlaybackService::class.java))
         super.onDestroy()
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
     }
 }
