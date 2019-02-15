@@ -1,7 +1,6 @@
 package com.royal.tenure.age.gold.girlfriend.MediaController
 
 import android.content.ComponentName
-import android.content.Context
 import android.os.*
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
@@ -21,19 +20,14 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.tasks.Task
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.auth.FirebaseAuthCredentialsProvider
-import java.io.IOException
-import java.text.FieldPosition
 
 
 val db : FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -45,11 +39,10 @@ class MainActivity : AppCompatActivity() {
     // Also do create a list of different streams. I'm fairly certain this code will revolve around
     // communication between the BrowserService and Browser my way of mediaChildren and root nodes.
 
-    lateinit var mGoogleSignInClient : GoogleSignInClient
+    lateinit var googleSignInClient : GoogleSignInClient
     private lateinit var auth: FirebaseAuth
     var user: FirebaseUser? = null
-
-    lateinit var mMediaBrowserCompat : MediaBrowserCompat
+    lateinit var mediaBrowser : MediaBrowserCompat
     lateinit var playPause : ImageView
     var playPosition: Long = 0
     var streamPosition: String = "1"
@@ -114,7 +107,7 @@ class MainActivity : AppCompatActivity() {
             super.onConnected()
             Log.e(Constants.TAG, "ran onConnected")
 
-            mMediaBrowserCompat.sessionToken.also { token ->
+            mediaBrowser.sessionToken.also { token ->
                 val mMediaController = MediaControllerCompat(
                     this@MainActivity, token
                 )
@@ -160,7 +153,7 @@ class MainActivity : AppCompatActivity() {
         Log.e(Constants.TAG, "ran onCreate")
 
         setContentView(R.layout.activity_main)
-        mMediaBrowserCompat = MediaBrowserCompat(this,
+        mediaBrowser = MediaBrowserCompat(this,
             ComponentName(this, MediaPlaybackService::class.java),
             mConnectionCallback,
             null)
@@ -169,9 +162,8 @@ class MainActivity : AppCompatActivity() {
             .requestIdToken(getString(R.string.server_id))
             .requestEmail()
             .build()
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
         auth = FirebaseAuth.getInstance()
-
         user = auth.currentUser
 
     }
@@ -179,18 +171,18 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        Log.e(Constants.TAG, "ran onStart. User data: " + user?.metadata)
+        Log.e(Constants.TAG, "ran onStart. User data: ")
         if(user == null) signIn()
         else {
             db.collection("users")
                 .document(auth.currentUser!!.uid)
                 .get().addOnSuccessListener { document ->
+                    Log.e(Constants.TAG, "collected play position data")
                     val value: Map<String, Any> = document.data!!
                     playPosition = value.get("playPosition") as Long
                     streamPosition = value.get("streamPosition") as String
 
-                    Log.e(Constants.TAG, "collected play position data")
-                    if(!mMediaBrowserCompat.isConnected) mMediaBrowserCompat.connect()
+                    if(!mediaBrowser.isConnected) mediaBrowser.connect()
                 }.addOnFailureListener{
                     Log.e(Constants.TAG, "failed to load position data: " + it)
                 }
@@ -199,17 +191,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun signIn() {
-        val signInIntent = mGoogleSignInClient.signInIntent
+        val signInIntent = googleSignInClient.signInIntent
         startActivityForResult(signInIntent, Constants.RC_SIGN_IN)
     }
 
     public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
         if (requestCode == Constants.RC_SIGN_IN) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(data!!)
-
             try {
                 val account : GoogleSignInAccount? = task.getResult(ApiException::class.java)
                 firebaseAuthWithGoogle(account!!)
@@ -225,12 +215,10 @@ class MainActivity : AppCompatActivity() {
         auth.signInWithCredential(credential).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Log.d(Constants.TAG, "signInWithCredential:success")
-                mMediaBrowserCompat.connect()
+                mediaBrowser.connect()
                 user = auth.currentUser
             } else {
-                Log.e(Constants.TAG, "Signing in was unsuccessful: " + task.exception)
-            }
-        }
+                Log.e(Constants.TAG, "Signing in was unsuccessful: " + task.exception) } }
     }
 
     override fun onStop() {

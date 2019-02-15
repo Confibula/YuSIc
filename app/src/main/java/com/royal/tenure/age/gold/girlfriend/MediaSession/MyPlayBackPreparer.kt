@@ -17,7 +17,6 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.royal.tenure.age.gold.girlfriend.Constants
 import com.royal.tenure.age.gold.girlfriend.GetBitmap
-import com.royal.tenure.age.gold.girlfriend.MediaController.Caller
 import com.royal.tenure.age.gold.girlfriend.MediaController.db
 import java.io.IOException
 
@@ -33,7 +32,6 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
     lateinit var mMediaMetadata : MediaMetadataCompat
 
     init {
-
         exoPlayer.addListener(object : Player.EventListener{
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
 
@@ -53,7 +51,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
                         // Todo: reached end of stream
                         // What do do when the stream reached the end?
-                        Log.e(Constants.TAG, "Reached the end of the music stream: " + e)
+                        android.util.Log.e(Constants.TAG, "Reached the end of the music stream: " + e)
                     }
                 }
             }
@@ -67,21 +65,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
         exoPlayer.prepare(videoSource)
         exoPlayer.seekTo(mBundle!!.getLong("position"))
-
     }
-
-    override fun onPrepareFromSearch(query: String?, extras: Bundle?) = Unit
-
-    override fun onCommand(player: Player?, command: String?, extras: Bundle?, cb: ResultReceiver?) = Unit
-
-    override fun getSupportedPrepareActions(): Long {
-        return  PlaybackStateCompat.ACTION_PREPARE_FROM_MEDIA_ID or
-                PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
-                PlaybackStateCompat.ACTION_PREPARE_FROM_SEARCH or
-                PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH
-    }
-
-    override fun getCommands(): Array<String>? = null
 
     fun createSleepMediaMetadata(mediaId: String) {
 
@@ -108,6 +92,19 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
             }
     }
 
+    override fun onPrepareFromSearch(query: String?, extras: Bundle?) = Unit
+
+    override fun onCommand(player: Player?, command: String?, extras: Bundle?, cb: ResultReceiver?) = Unit
+
+    override fun getSupportedPrepareActions(): Long {
+        return  PlaybackStateCompat.ACTION_PREPARE_FROM_MEDIA_ID or
+                PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
+                PlaybackStateCompat.ACTION_PREPARE_FROM_SEARCH or
+                PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH
+    }
+
+    override fun getCommands(): Array<String>? = null
+
     override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
 
         mMediaId = mediaId!!
@@ -122,3 +119,4 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
     }
 }
+
