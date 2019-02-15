@@ -31,7 +31,9 @@ import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.offline.DownloadService.startForeground
 import com.google.firebase.firestore.FirebaseFirestore
 import com.royal.tenure.age.gold.girlfriend.Constants
+import com.royal.tenure.age.gold.girlfriend.GetBitmap
 import com.royal.tenure.age.gold.girlfriend.MediaController.MainActivity
+import com.royal.tenure.age.gold.girlfriend.MediaController.db
 import com.royal.tenure.age.gold.girlfriend.R
 
 //import android.support.annotation.RequiresApi
@@ -47,15 +49,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         NotificationCompat.Builder(this, Constants.APP).apply {
             setStyle(androidx.media.app.NotificationCompat.MediaStyle()
                 .setMediaSession(mMediaSessionCompat.sessionToken))
+
             // Todo: Add play actions
             // Add play actions to the notification
 
-
-            // Todo: contentIntent
-            // Find out how to deal with the fact that the contentIntent triggers onCreate in MainActivity
-            // Is this a fault with the contentIntent
-            // or actually a wrong implementation of MainActivity and MediaBrowserCompat
-            //setContentIntent(mController.sessionActivity)
+            setContentIntent(mController.sessionActivity)
             setSmallIcon(R.drawable.exo_notification_small_icon)
             setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             setOnlyAlertOnce(true)

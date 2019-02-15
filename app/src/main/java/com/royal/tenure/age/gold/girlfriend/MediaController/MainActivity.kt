@@ -36,6 +36,7 @@ import java.io.IOException
 import java.text.FieldPosition
 
 
+val db : FirebaseFirestore = FirebaseFirestore.getInstance()
 class MainActivity : AppCompatActivity() {
 
     // Todo: future improvements
@@ -47,7 +48,6 @@ class MainActivity : AppCompatActivity() {
     lateinit var mGoogleSignInClient : GoogleSignInClient
     private lateinit var auth: FirebaseAuth
     var user: FirebaseUser? = null
-    val db : FirebaseFirestore = FirebaseFirestore.getInstance()
 
     lateinit var mMediaBrowserCompat : MediaBrowserCompat
     lateinit var playPause : ImageView
@@ -70,7 +70,6 @@ class MainActivity : AppCompatActivity() {
                 imageView.setImageBitmap(bitmap)
                 textView.setText(title + "\n" + creator)
                 playPause.setVisibility(View.VISIBLE)
-
                 streamPosition = id
             }
 
@@ -98,9 +97,10 @@ class MainActivity : AppCompatActivity() {
                     playPause.setImageDrawable(
                         ContextCompat.getDrawable(this@MainActivity,
                             R.drawable.exo_controls_pause)) }
-                else -> null
+                else -> {
+                    playPause.setVisibility(View.INVISIBLE)
+                }
             }
-
             super.onPlaybackStateChanged(state)
         }
 
@@ -122,22 +122,15 @@ class MainActivity : AppCompatActivity() {
                 //set it for the activity for later retrieval
                 MediaControllerCompat.setMediaController(this@MainActivity, mMediaController)
 
-                // Todo: remember where user left
-                // In the bundle, write song position. And in the id, write users specific ID
-                // This is a task that will make it so that the playback recognizes where the user last left
-
-                // Check also if the app is running in the foreground.
-                // In that case, fetch the current position of the stream!
                 val bundle: Bundle = Bundle().also {
                     it.putLong("position", playPosition)
                 }
                 mMediaController.transportControls.prepareFromMediaId(streamPosition, bundle)
+                buildPlayPause()
+                mMediaController.registerCallback(mControllerCallback)
 
                 var titleWhenStarted : TextView = findViewById(R.id.title_when_started)
                 titleWhenStarted.setVisibility(View.INVISIBLE)
-
-                buildPlayPause()
-                mMediaController.registerCallback(mControllerCallback)
             }
         }
 
@@ -246,31 +239,5 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-    }
-}
-
-class Caller(){
-    lateinit var listener : Listener
-
-    fun notifySomething(){
-        listener.onNotified()
-    }
-}
-
-interface Listener {
-    fun onNotified()
-}
-
-class Me : Listener{
-    lateinit var caller : Caller
-
-    init {
-        this.caller = Caller()
-        caller.listener = this
-    }
-
-    override fun onNotified() {
-
-
     }
 }

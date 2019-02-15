@@ -17,6 +17,8 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.royal.tenure.age.gold.girlfriend.Constants
 import com.royal.tenure.age.gold.girlfriend.GetBitmap
+import com.royal.tenure.age.gold.girlfriend.MediaController.Caller
+import com.royal.tenure.age.gold.girlfriend.MediaController.db
 import java.io.IOException
 
 
@@ -24,18 +26,11 @@ import java.io.IOException
 class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                          private val dataFactory: DefaultDataSourceFactory,
                          private val exoPlayer: ExoPlayer,
-                         private val context: Context) : MediaSessionConnector.PlaybackPreparer, MyListener {
+                         private val context: Context) : MediaSessionConnector.PlaybackPreparer {
 
     lateinit var mMediaId : String
-    lateinit var mMediaMetadata : MediaMetadataCompat
     lateinit var mBundle: Bundle
-    var caller : Caller
-    val db = FirebaseFirestore.getInstance()
-
-    init {
-        this.caller = Caller()
-        caller.registerListener(this)
-    }
+    lateinit var mMediaMetadata : MediaMetadataCompat
 
     init {
 
@@ -54,7 +49,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
 
                     try{
                         mediaSession.controller.transportControls.playFromMediaId(finalId, null)
-                    } catch (e: IOException){
+                    } catch (e: Throwable){
 
                         // Todo: reached end of stream
                         // What do do when the stream reached the end?
@@ -65,11 +60,7 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
         })
     }
 
-    override fun createdPlaybackState() {
-
-    }
-
-    override fun createdMediaMetadata() {
+    fun createdMediaMetadata() {
         val mediaUri: Uri = Uri.parse(mMediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI))
         val videoSource = ExtractorMediaSource.Factory(dataFactory)
             .createMediaSource(mediaUri)
@@ -113,12 +104,8 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
                         .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, mediaId)
                         .build()
 
-                caller.notifyCreatedMediaMetadata()
+                createdMediaMetadata()
             }
-    }
-
-    fun createPlaybackState(){
-
     }
 
     override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
@@ -134,29 +121,4 @@ class MyPlayBackPreparer(private val mediaSession: MediaSessionCompat,
     override fun onPrepare() {
 
     }
-
-}
-
-interface MyListener {
-    fun createdMediaMetadata()
-
-    fun createdPlaybackState()
-}
-
-class Caller {
-    private val listeners = ArrayList<MyListener>()
-
-    fun registerListener(listener: MyListener) {
-        listeners.add(listener)
-    }
-
-    fun notifyCreatedMediaMetadata() {
-        for (listener in listeners) {
-            listener.createdMediaMetadata()
-        }
-    }
-
-    fun notifyCreatedPlaybackState(){
-        for (listener in listeners) {
-            listener.createdPlaybackState() } }
 }
