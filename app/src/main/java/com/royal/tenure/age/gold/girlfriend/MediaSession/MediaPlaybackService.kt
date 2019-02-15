@@ -134,6 +134,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onDestroy() {
         Log.e(Constants.TAG, "ran service's onDestroy")
+        exoPlayer.stop()
         super.onDestroy()
     }
 

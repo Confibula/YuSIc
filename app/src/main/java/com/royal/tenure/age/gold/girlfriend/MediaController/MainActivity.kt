@@ -20,6 +20,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.common.api.ApiException
@@ -45,7 +46,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var mediaBrowser : MediaBrowserCompat
     lateinit var playPause : ImageView
     var playPosition: Long = 0
-    var streamPosition: String = "1"
+    var streamPosition: String? = "1"
 
     val mControllerCallback = object : MediaControllerCompat.Callback(){
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
@@ -53,9 +54,7 @@ class MainActivity : AppCompatActivity() {
             var textView : TextView = findViewById<TextView>(R.id.text_and_info)
             playPause = findViewById<ImageView>(R.id.play_pause)
 
-            var id : String? = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
-
-            if(id != null){
+            streamPosition = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)?.apply {
                 val title : String = metadata!!.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
                 val creator: String = metadata!!.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)
                 val bitmap : Bitmap = metadata!!.getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
@@ -63,9 +62,7 @@ class MainActivity : AppCompatActivity() {
                 imageView.setImageBitmap(bitmap)
                 textView.setText(title + "\n" + creator)
                 playPause.setVisibility(View.VISIBLE)
-                streamPosition = id
             }
-
             super.onMetadataChanged(metadata)
         }
 
@@ -226,6 +223,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        mediaBrowser.disconnect()
+        stopService(Intent(this, MediaPlaybackService::class.java))
         super.onDestroy()
     }
 }
