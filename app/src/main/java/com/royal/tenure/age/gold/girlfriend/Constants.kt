@@ -9,5 +9,6 @@ public class Constants{
         const val RC_SIGN_IN = 28657
         const val NOTIFICATION_ID = 10946
         const val NOTIFICATION_CHANNEL = "6765"
+        const val POSITION = "17711"
     }
 }

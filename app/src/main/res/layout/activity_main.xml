@@ -1,39 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
              xmlns:tools="http://schemas.android.com/tools"
              android:layout_width="match_parent"
              android:layout_height="match_parent"
              tools:context=".MediaController.MainActivity">
 
-    <ImageView android:id="@+id/image"
-               android:layout_width="match_parent"
-               android:layout_height="match_parent"/>
 
-    <ImageView
-            android:visibility="invisible"
-            android:id="@+id/play_pause"
-            android:src="@drawable/exo_controls_play"
-            android:padding="89dp"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-
-    <TextView
-            android:layout_marginTop="13dp"
-            android:textSize="18dp"
-            android:textColor="@color/colorPrimaryDark"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_horizontal"
-            android:id="@+id/text_and_info"/>
-
-    <TextView android:layout_width="match_parent"
-              android:layout_marginTop="144dp"
-              android:textSize="55sp"
-              android:text="@string/app_name"
-              android:textColor="@color/colorPrimaryDark"
-              android:gravity="center_horizontal"
-              android:id="@+id/title_when_started"
-              android:layout_height="match_parent"/>
-
-
-</FrameLayout>
+</RelativeLayout>
