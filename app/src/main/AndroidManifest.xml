@@ -12,8 +12,8 @@
                  android:roundIcon="@mipmap/yusic"
                  android:supportsRtl="true"
                  android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-        <!-- Todo: Without DOM -->
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+                  android:launchMode="singleTask">
 
             <intent-filter android:order="1">
                 <action android:name="android.intent.action.VIEW"/>
@@ -38,12 +38,6 @@
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
-
-        <receiver android:name=".MediaPlaybackService$BecomingNoisyReceiver">
-            <intent-filter>
-                <action android:name="android.media.AUDIO_BECOMING_NOISY"></action>
-            </intent-filter>
-        </receiver>
 
     </application>
 </manifest>

@@ -72,15 +72,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun recyclerView(){
-        val recyclerView = findViewById<RecyclerView>(R.id.recycler_view).apply {
-
-            // Needs DOM knowledge
-            adapter
-            layoutManager
-        }
-    }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,10 +98,12 @@ class MainActivity : AppCompatActivity() {
         if(auth.currentUser == null) startSignInProcess()
         if(!mediaBrowser.isConnected) {
             mediaBrowser.connect()
-            startService(Intent(this, MediaPlaybackService::class.java))
         } }
 
     override fun onStop() {
+        if(mediaBrowser.isConnected) {
+            mediaBrowser.disconnect()
+        }
         super.onStop() }
 
     override fun onPause() {
