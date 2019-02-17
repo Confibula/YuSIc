@@ -1,10 +1,14 @@
-package com.royal.tenure.age.gold.girlfriend.MediaSession
+package com.royal.tenure.age.gold.girlfriend
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
+import android.media.browse.MediaBrowser
 import android.net.Uri
 import android.os.*
 import android.support.v4.media.MediaBrowserCompat
@@ -16,16 +20,13 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.media.MediaBrowserServiceCompat
+import androidx.media.session.MediaButtonReceiver
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
 import com.google.android.exoplayer2.util.Log
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.source.ExtractorMediaSource
-import com.royal.tenure.age.gold.girlfriend.Constants
-import com.royal.tenure.age.gold.girlfriend.GetBitmap
-import com.royal.tenure.age.gold.girlfriend.MediaController.db
-import com.royal.tenure.age.gold.girlfriend.R
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -37,9 +38,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         NotificationCompat.Builder(this, Constants.APP).apply {
             setStyle(androidx.media.app.NotificationCompat.MediaStyle()
                 .setMediaSession(mediaSession.sessionToken))
-
-            // Todo: Add play actions
-            // Add play actions to the notification
 
             setContentIntent(controller.sessionActivity)
             setSmallIcon(R.drawable.exo_notification_small_icon)
@@ -62,12 +60,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var dataFactory: DefaultDataSourceFactory
     private lateinit var notificationManager: NotificationManagerCompat
 
-    private lateinit var metadata: MediaMetadataCompat
-    private var soulMetadataObjects : HashMap<String, MediaMetadataCompat> = HashMap()
-    fun createSoulMediaMetadataObjects(){
-        var hashmap : HashMap<String, MediaMetadataCompat> = HashMap()
-
-        db.collection("soul")
+    private var metadata: MediaMetadataCompat? = null
+    private var metadataObjects : HashMap<String, MediaMetadataCompat> = HashMap()
+    fun createMediaMetadataObjects(){
+        db.collection("stream")
             .get()
             .addOnSuccessListener {documents ->
                 for(document in documents){
@@ -77,6 +73,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     val creator = value.get("creator") as String
                     val title = value.get("title") as String
                     val id = value.get("id") as String
+                    val genre = value.get("genre") as String
 
                     val metaData : MediaMetadataCompat =
                         MediaMetadataCompat.Builder()
@@ -85,13 +82,23 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, creator)
                             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
                             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
+                            .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
                             .build()
-                    hashmap[id] = metaData
+                    metadataObjects[id] = metaData
+
+                    // Todo: Without DOM
+                    controller.transportControls.playFromMediaId("1", null)
                 }
-                createSessionConnection()
-                soulMetadataObjects = hashmap
             }.addOnFailureListener {exception ->
                 Log.e(Constants.TAG, "failed to read from FireStore: " + exception) }
+    }
+
+
+
+    inner class BecomingNoisyReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                controller.transportControls.pause() } }
     }
 
     override fun onCreate() {
@@ -99,7 +106,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         Log.e(Constants.TAG, "ran service's onCreate")
 
         // Skip this line every time your debugging so that you don't waste fireStore quota!
-        createSoulMediaMetadataObjects()
+        createMediaMetadataObjects()
 
         val sessionIntent = packageManager?.getLaunchIntentForPackage(packageName)
         val sessionActivityPendingIntent = PendingIntent.getActivity(this, 0, sessionIntent, 0)
@@ -114,6 +121,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             it.registerCallback(mCallback) }
 
         exoPlayer.addListener(playerEventListener)
+
+        createSessionConnection()
+
+        sessionToken = mediaSession.sessionToken
     }
 
     fun createSessionConnection(){
@@ -124,21 +135,27 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             it.setPlayer(exoPlayer, playbackPreparer) }
 
-        sessionToken = mediaSession.sessionToken
         Log.e(Constants.TAG, "ran createdSessionConnection")
     }
 
     var playerEventListener = object : Player.EventListener{
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
 
-            if(playbackState == Player.STATE_READY){
-                mediaSession.setMetadata(metadata)
+            // Todo: Without DOM
+            when(playbackState){
+                Player.STATE_READY -> {
+                    mediaSession.setMetadata(metadata) }
+                Player.STATE_ENDED -> {
+                    var metadataId : Int = Integer.parseInt(
+                        metadata!!.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID))
+                    val nextId = metadataId + 1
+                    controller.transportControls.playFromMediaId(
+                        Integer.toString(nextId),
+                        null)
+                NotificationManagerCompat.from(this@MediaPlaybackService)
+                    .notify(Constants.NOTIFICATION_ID, buildNotification())}
+                else -> return
             }
-
-            if(playbackState == Player.STATE_ENDED){
-
-            }
-
         }
     }
 
@@ -152,7 +169,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPause(player: Player?) {
             player!!.playWhenReady = false
 
-            if(inForeground) stopForeground(false)
+            stopForeground(false)
         }
 
         override fun onFastForward(player: Player?) = Unit
@@ -160,9 +177,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPlay(player: Player?) {
             player!!.playWhenReady = true
 
-            if(!inForeground) startForeground(Constants.NOTIFICATION_ID, buildNotification()).also {
-                inForeground = true }
-            startService(Intent(this@MediaPlaybackService, MediaPlaybackService::class.java))
+            startForeground(Constants.NOTIFICATION_ID, buildNotification())
         }
 
         override fun onStop(player: Player?) {
@@ -193,14 +208,24 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun getCommands(): Array<String>? = null
 
+        // Todo: Queue
+        // create a playQueue when the player starts playing a mediaItem
+        fun createQueue(){}
+        var queueLength = 8
+
         override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
-            val song = soulMetadataObjects[mediaId]
-            metadata = song!!
+            var song = metadataObjects[mediaId]
+            metadata = song
+            Log.e(Constants.TAG, "current metadata set to: "
+                    + metadata?.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
+
             val mediaUri = Uri.parse(song?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI))
             val videoSource = ExtractorMediaSource.Factory(dataFactory)
                 .createMediaSource(mediaUri)
-
             exoPlayer.prepare(videoSource)
+            exoPlayer.seekTo(
+                extras!!.getLong("playPosition")
+            )
         }
         override fun onPrepareFromUri(uri: Uri?, extras: Bundle?) = Unit
 
@@ -209,15 +234,19 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
     }
 
-    override fun onLoadChildren(p0: String, p1: Result<MutableList<MediaBrowserCompat.MediaItem>>) {
+    override fun onLoadChildren(parentId: String, result: Result<MutableList<MediaBrowserCompat.MediaItem>>) {
 
     }
 
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? {
-        return BrowserRoot(Constants.APP, null)
+        return BrowserRoot(Constants.ROOT_ID, null)
     }
 
     override fun onDestroy() {
+        mediaSession.run {
+            isActive = false
+            release()
+        }
         super.onDestroy()
     }
 
@@ -247,19 +276,26 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(state)
 
-        }
+            // Todo: Without DOM
+            when(state?.state){
+                PlaybackStateCompat.STATE_PLAYING -> {
+                    startForeground(Constants.NOTIFICATION_ID, buildNotification())
+                    startService(Intent(this@MediaPlaybackService, MediaPlaybackService::class.java)) }
+                PlaybackStateCompat.STATE_PAUSED -> {
+                    stopForeground(false)}
+                else -> return }
 
+
+        }
     }
 
-    var inForeground : Boolean = false
 
     fun buildNotification(): Notification{
         return notificationBuilder.apply {
             setContentText(controller.metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST))
             setContentTitle(controller.metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
             setLargeIcon(controller.metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ART))
-        }.build()
-    }
+        }.build() }
 
 }
 
