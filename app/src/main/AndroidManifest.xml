@@ -44,5 +44,6 @@
                 <action android:name="android.media.AUDIO_BECOMING_NOISY"></action>
             </intent-filter>
         </receiver>
+
     </application>
 </manifest>

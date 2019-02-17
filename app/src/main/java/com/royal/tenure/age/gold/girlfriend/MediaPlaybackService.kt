@@ -34,7 +34,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private val notificationBuilder : NotificationCompat.Builder by lazy {
         NotificationCompat.Builder(this, Constants.APP).apply {
             setStyle(androidx.media.app.NotificationCompat.MediaStyle()
-                .setMediaSession(mediaSession.sessionToken))
+                .setMediaSession(mediaSession.sessionToken)
+                .setShowActionsInCompactView())
 
             setContentIntent(controller.sessionActivity)
             setSmallIcon(R.drawable.exo_notification_small_icon)
@@ -82,9 +83,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                             .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
                             .build()
                     metadataObjects[id] = metaData
-
-                    // Todo: Without DOM
-                    controller.transportControls.playFromMediaId("1", null)
                 }
             }.addOnFailureListener {exception ->
                 Log.e(Constants.TAG, "failed to read from FireStore: " + exception) }
@@ -94,8 +92,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     inner class BecomingNoisyReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            Log.e(Constants.TAG, "ran onReceive in my BroadcastReceiver")
+
             if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
-                controller.transportControls.pause() } }
+                controller.transportControls.pause() }
+
+
+
+        }
     }
 
     override fun onCreate() {
@@ -143,6 +147,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // Todo: Without DOM
             when(playbackState){
                 Player.STATE_READY -> {
+
+
                     mediaSession.setMetadata(metadata) }
                 Player.STATE_ENDED -> {
                     var metadataId : Int = Integer.parseInt(
@@ -154,6 +160,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 NotificationManagerCompat.from(this@MediaPlaybackService)
                     .notify(Constants.NOTIFICATION_ID, buildNotification())}
                 else -> return
+
+
             }
         }
     }
@@ -168,7 +176,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPause(player: Player?) {
             player!!.playWhenReady = false
 
-            stopForeground(false)
         }
 
         override fun onFastForward(player: Player?) = Unit
@@ -176,7 +183,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPlay(player: Player?) {
             player!!.playWhenReady = true
 
-            startForeground(Constants.NOTIFICATION_ID, buildNotification())
         }
 
         override fun onStop(player: Player?) {
@@ -246,8 +252,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             isActive = false
             release()
         }
-        Log.e(Constants.TAG, "ran onDestroy in the service")
-        stopSelf()
         super.onDestroy()
     }
 
@@ -281,16 +285,17 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // Todo: Without DOM
             when(state?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
-                    startForeground(Constants.NOTIFICATION_ID, buildNotification())
-                    startService(Intent(this@MediaPlaybackService, MediaPlaybackService::class.java)) }
+                    startForeground(Constants.NOTIFICATION_ID, buildNotification()) }
                 PlaybackStateCompat.STATE_PAUSED -> {
                     positionData["playPosition"] = state.position
                     positionData["streamPosition"] = metadata?.getString(
                         MediaMetadataCompat.METADATA_KEY_MEDIA_ID) as String
                     writeToFireStoreThePositionData()
+                    stopForeground(false)
                 }
                 else -> {
-                    stopForeground(false) } } }
+                    stopForeground(false)
+                } } }
     }
 
     lateinit var positionData : HashMap<String, Any>
@@ -327,6 +332,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             setContentText(controller.metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST))
             setContentTitle(controller.metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
             setLargeIcon(controller.metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ART))
+
+
         }.build() }
 
 }

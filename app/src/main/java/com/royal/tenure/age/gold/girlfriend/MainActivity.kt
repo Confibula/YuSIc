@@ -13,6 +13,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.common.api.ApiException
@@ -104,15 +105,15 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
 
         if(auth.currentUser == null) startSignInProcess()
-        startService(Intent(this, MediaPlaybackService::class.java))
-        mediaBrowser.connect() }
+        if(!mediaBrowser.isConnected) {
+            mediaBrowser.connect()
+            startService(Intent(this, MediaPlaybackService::class.java))
+        } }
 
     override fun onStop() {
-        mediaBrowser.disconnect()
         super.onStop() }
 
     override fun onPause() {
-        mediaBrowser.disconnect()
         super.onPause() }
 
     private fun startSignInProcess() {
