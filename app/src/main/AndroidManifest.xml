@@ -13,8 +13,7 @@
                  android:supportsRtl="true"
                  android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         <!-- Todo: Without DOM -->
-        <activity android:name=".MainActivity"
-                  android:launchMode="singleTask">
+        <activity android:name=".MainActivity">
 
             <intent-filter android:order="1">
                 <action android:name="android.intent.action.VIEW"/>

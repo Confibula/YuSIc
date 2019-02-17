@@ -22,12 +22,11 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 
 val db : FirebaseFirestore = FirebaseFirestore.getInstance()
+val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
 class MainActivity : AppCompatActivity() {
 
     lateinit var googleSignInClient : GoogleSignInClient
-    lateinit var auth: FirebaseAuth
-    lateinit var positionData : HashMap<String, Any>
     lateinit var mediaBrowser : MediaBrowserCompat
 
     val controllerCallback = object : MediaControllerCompat.Callback(){
@@ -48,25 +47,6 @@ class MainActivity : AppCompatActivity() {
 
             super.onPlaybackStateChanged(state)
         }
-    }
-
-    fun writeToFireStoreThePositionData(){
-        db.collection("users")
-            .document(auth.currentUser!!.uid)
-            .set(positionData) }
-    fun fetchPositionData(){
-        db.collection("users")
-            .document(auth.currentUser!!.uid)
-            .get().addOnSuccessListener { document ->
-                val value: Map<String, Any> = document.data!!
-                val data: HashMap<String, Any> = HashMap()
-                val playPosition = value.get("playPosition") as Long
-                val streamPosition = value.get("streamPosition") as String
-                data["playPosition"] = playPosition
-                data["streamPosition"] = streamPosition
-
-                positionData = data
-            }
     }
 
     private val connectionCallback = object : MediaBrowserCompat.ConnectionCallback() {
@@ -115,7 +95,6 @@ class MainActivity : AppCompatActivity() {
             .requestEmail()
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
-        auth = FirebaseAuth.getInstance()
 
     }
 

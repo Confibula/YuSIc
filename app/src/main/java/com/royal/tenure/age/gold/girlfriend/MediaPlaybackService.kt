@@ -1,9 +1,6 @@
 package com.royal.tenure.age.gold.girlfriend
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -119,6 +116,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         controller = mediaSession.controller.also {
             it.registerCallback(mCallback) }
+
+        fetchPositionData()
 
         exoPlayer.addListener(playerEventListener)
 
@@ -247,6 +246,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             isActive = false
             release()
         }
+        Log.e(Constants.TAG, "ran onDestroy in the service")
+        stopSelf()
         super.onDestroy()
     }
 
@@ -276,19 +277,50 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(state)
 
+
             // Todo: Without DOM
             when(state?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
                     startForeground(Constants.NOTIFICATION_ID, buildNotification())
                     startService(Intent(this@MediaPlaybackService, MediaPlaybackService::class.java)) }
                 PlaybackStateCompat.STATE_PAUSED -> {
-                    stopForeground(false)}
-                else -> return }
-
-
-        }
+                    positionData["playPosition"] = state.position
+                    positionData["streamPosition"] = metadata?.getString(
+                        MediaMetadataCompat.METADATA_KEY_MEDIA_ID) as String
+                    writeToFireStoreThePositionData()
+                }
+                else -> {
+                    stopForeground(false) } } }
     }
 
+    lateinit var positionData : HashMap<String, Any>
+    fun writeToFireStoreThePositionData(){
+        db.collection("users")
+            .document(auth.currentUser!!.uid)
+            .set(positionData) }
+    fun fetchPositionData(){
+        db.collection("users")
+            .document(auth.currentUser!!.uid)
+            .get().addOnSuccessListener { document ->
+                val value: Map<String, Any> = document.data!!
+                val data: HashMap<String, Any> = HashMap()
+                val playPosition = value.get("playPosition") as Long
+                val streamPosition = value.get("streamPosition") as String
+                data["playPosition"] = playPosition
+                data["streamPosition"] = streamPosition
+
+                positionData = data
+
+                playSong()
+            }
+    }
+    fun playSong(){
+        controller.transportControls.playFromMediaId(
+            positionData["streamPosition"] as String,
+            Bundle().apply {
+                putLong(
+                    "playPosition",
+                    positionData["playPosition"] as Long) }) }
 
     fun buildNotification(): Notification{
         return notificationBuilder.apply {
