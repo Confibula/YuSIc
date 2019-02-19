@@ -23,14 +23,17 @@ import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.firebase.firestore.FirebaseFirestore
 
 @RequiresApi(Build.VERSION_CODES.O)
 class MediaPlaybackService : MediaBrowserServiceCompat() {
+    val db : FirebaseFirestore = FirebaseFirestore.getInstance()
+
     private val exoPlayer : ExoPlayer by lazy {
         ExoPlayerFactory.newSimpleInstance(this) }
 
     private val notificationBuilder : NotificationCompat.Builder by lazy {
-        NotificationCompat.Builder(this, Constants.APP).apply {
+        NotificationCompat.Builder(this, Commons.APP).apply {
             setSmallIcon(R.drawable.exo_notification_small_icon)
             setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             setOnlyAlertOnce(true)
@@ -41,14 +44,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             setContentIntent(controller.sessionActivity)
 
             // Creating the channel
-            val name = getString(R.string.adjust)
-            val descriptionText = getString(R.string.description)
-            val importance = NotificationManager.IMPORTANCE_LOW
-            val mChannel = NotificationChannel(Constants.NOTIFICATION_CHANNEL, name, importance)
-            mChannel.description = descriptionText
-            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            val mChannel = NotificationChannel(
+                Commons.NOTIFICATION_CHANNEL,
+                getString(R.string.adjust),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply { description = getString(R.string.description) }
             notificationManager.createNotificationChannel(mChannel)
-            setChannelId(mChannel.id)
         }
     }
 
@@ -58,6 +59,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var dataFactory: DefaultDataSourceFactory
     private lateinit var notificationManager: NotificationManagerCompat
     private lateinit var receiver: MyReceiver
+    private lateinit var metadata: MediaMetadataCompat
 
     override fun onTaskRemoved(rootIntent: Intent) {
         super.onTaskRemoved(rootIntent)
@@ -65,35 +67,33 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         exoPlayer.stop(true)
     }
 
-    private var metadata: MediaMetadataCompat? = null
     private var metadatas: HashMap<String, MediaMetadataCompat> = HashMap()
-    val streamCount = 55
+    val streamCount = 55L
     fun createMetadatas(){
         db.collection("users")
             .document(auth.currentUser!!.uid)
             .collection("positions")
             .get().addOnSuccessListener { positions ->
                 for(position in positions){
-                    val value: Map<String, Any> = position.data
-                    val streamPoint = value.get("streamPosition") as Int
-                    val streamName = value.get("streamName") as String
+                    val positionData: Map<String, Any> = position.data
+                    val streamPoint = positionData["streamPoint"] as Int
+                    val streamName = positionData["streamName"]
 
                     // Start the fetching
                     db.collection("stream")
-                        .orderBy("id")
-                        .startAt(streamPoint)
                         .whereEqualTo("genre", streamName)
-                        .endAt(streamPoint + streamCount)
+                        .startAt(streamPoint)
+                        .limit(streamCount)
                         .get()
                         .addOnSuccessListener {documents ->
                             for(document in documents){
-                                val value: Map<String, Any> = document.data
-                                val bitmap = value.get("image") as String
-                                val source = value.get("source") as String
-                                val creator = value.get("creator") as String
-                                val title = value.get("title") as String
-                                val id = value.get("id") as String
-                                val genre = value.get("genre") as String
+                                val song: Map<String, Any> = document.data
+                                val bitmap = song["image"] as String
+                                val source = song["source"] as String
+                                val creator = song["creator"] as String
+                                val title = song["title"] as String
+                                val id = song["id"] as String
+                                val genre = song["genre"] as String
 
                                 val data : MediaMetadataCompat =
                                     MediaMetadataCompat.Builder()
@@ -107,7 +107,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                                 metadatas[id] = data
                             }
                         }.addOnFailureListener {exception ->
-                            Log.e(Constants.TAG, "failed to read from FireStore: " + exception) }
+                            Log.e(Commons.TAG, "failed to read from FireStore: " + exception) }
                 }
             }
     }
@@ -117,14 +117,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         createMetadatas()
 
         // Todo:
-        // When the service is created, add support for fetching the last metadata
-        // that was showing when the user left the app and show it.
-        // This might work best by storing the metadata in a ContentResolver
+        // ContentProvider for Sonos and for your apps metadata
 
         val sessionIntent = packageManager?.getLaunchIntentForPackage(packageName)
         val sessionActivityPendingIntent = PendingIntent.getActivity(this, 0, sessionIntent, 0)
 
-        mediaSession = MediaSessionCompat(this, Constants.TAG).apply {
+        mediaSession = MediaSessionCompat(this, Commons.TAG).apply {
                 setSessionActivity(sessionActivityPendingIntent)
                 isActive = true }
         sessionToken = mediaSession.sessionToken
@@ -141,7 +139,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         sessionConnector = MediaSessionConnector(mediaSession, playbackController).also {
             dataFactory = DefaultDataSourceFactory(
                 this,
-                Util.getUserAgent(this, Constants.APP))
+                Util.getUserAgent(this, Commons.APP))
 
             it.setPlayer(exoPlayer, playbackPreparer) }
     }
@@ -184,7 +182,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             player!!.repeatMode = Player.REPEAT_MODE_ONE
 
         }
-
     }
 
     private val browseTree: BrowseTree by lazy {
@@ -202,26 +199,21 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun getCommands(): Array<String>? = null
 
-
-        override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
-
-            val streamies : MutableList<MediaMetadataCompat>? = browseTree[mediaId]
-
-            // Todo:
-            // Here a playlist is actually created. You also need to figure out what intent-filter
-            // the "Sonos" application uses to allow playing music from "Sonos". Add support,
-            // for playing one of the streams on your app with "Sonos".
-
+        fun playlist(streamies: MutableList<MediaMetadataCompat>?) : ConcatenatingMediaSource{
             var theStream = ConcatenatingMediaSource()
             streamies?.forEach {song ->
-                val mediaUri = Uri.parse(song.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI))
                 val videoSource = ExtractorMediaSource.Factory(dataFactory)
-                    .createMediaSource(mediaUri)
+                    .createMediaSource(Uri.parse(song.mediaUri))
                 theStream = ConcatenatingMediaSource(theStream, videoSource)
             }
-            exoPlayer.prepare(theStream)
-
+            return theStream
         }
+
+        override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
+            val playlist = playlist(browseTree[mediaId])
+            exoPlayer.prepare(playlist)
+        }
+
         override fun onPrepareFromUri(uri: Uri?, extras: Bundle?) = Unit
 
         override fun onPrepare() {
@@ -253,7 +245,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     }
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? {
-        return BrowserRoot(Constants.ROOT_ID, null)
+        return BrowserRoot(Commons.ROOT_ID, null)
     }
     override fun onDestroy() {
         super.onDestroy()
@@ -271,23 +263,22 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     // As far as I know, having multiple controllers for a session is okay.
     // This is my second controller. I was worrying whether this is bad code,
     // am now fairly confident, it's completely fine!
-    val mCallback = object : MediaControllerCompat.Callback(){
-        lateinit var state : PlaybackStateCompat
+    val mCallback: MediaControllerCompat.Callback = object : MediaControllerCompat.Callback(){
+        lateinit var playback : PlaybackStateCompat
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
 
-
         }
         @RequiresApi(Build.VERSION_CODES.O)
-        override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
-            super.onPlaybackStateChanged(state)
+        override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
+            super.onPlaybackStateChanged(playback)
 
-            if(state!=null) this.state = state
+            playback?.let { this.playback = it }
 
-            when(state?.state){
+            when(playback?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
-                    startForeground(Constants.NOTIFICATION_ID, notification())
+                    startForeground(Commons.NOTIFICATION_ID, notification())
                     this@MediaPlaybackService
                         .registerReceiver(receiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
                 }
@@ -295,7 +286,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     stopForeground(false)
                     this@MediaPlaybackService
                         .unregisterReceiver(receiver)
-                    if(state?.state == PlaybackStateCompat.STATE_NONE){
+                    if(playback?.state == PlaybackStateCompat.STATE_NONE){
                         stopSelf()
                     }
                 }
@@ -303,19 +294,19 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
         fun notification(): Notification{
             return notificationBuilder.apply {
-                setContentText(controller.metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST))
-                setContentTitle(controller.metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
+                setContentText(metadata.artist)
+                setContentTitle(metadata.title)
 
                 // Todo:
                 // right now the notification can't show any image.
                 // How do you fix this without making your app run slowly,
                 // doing ASyncTasks for bitmaps . . .
 
-                if(state.isPlaying){
+                if(playback.isPlaying){
                     addAction(R.drawable.exo_controls_pause, applicationContext.getString(R.string.pause), MediaButtonReceiver
                         .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PAUSE))
                 }
-                if(state.isPlayEnabled){
+                if(playback.isPlayEnabled){
                     addAction(R.drawable.exo_controls_play, applicationContext.getString(R.string.play), MediaButtonReceiver
                         .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PLAY))
                 }

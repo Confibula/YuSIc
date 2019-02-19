@@ -11,63 +11,50 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import android.content.Intent
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
-import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.view.View
-import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProviders
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.AuthCredential
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 
-val db : FirebaseFirestore = FirebaseFirestore.getInstance()
-val auth: FirebaseAuth = FirebaseAuth.getInstance()
-
 class MainActivity : AppCompatActivity() {
+    val db : FirebaseFirestore = FirebaseFirestore.getInstance()
 
     // Todo:
     // Add support for a toolbar that shows a PlayButton and a looping option for the current song.
     // Let this toolbar be on the bottom of the MainActivity
 
-    lateinit var googleSignInClient : GoogleSignInClient
-    lateinit var mediaBrowser : MediaBrowserCompat
+    private lateinit var googleSignInClient : GoogleSignInClient
+    private lateinit var mediaBrowser : MediaBrowserCompat
 
     val controllerCallback = object : MediaControllerCompat.Callback(){
-        var metadata : MediaMetadataCompat? = null
+        lateinit var metadata : MediaMetadataCompat
 
-        override fun onMetadataChanged(metadataParam: MediaMetadataCompat?) {
-            super.onMetadataChanged(metadataParam)
-
-            Log.e(Constants.TAG, "metadata: " + metadataParam
-                ?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID))
-
-            if(metadata!= null) metadata = metadataParam
+        override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
+            super.onMetadataChanged(metadata)
+            metadata?.let { this.metadata = it}
         }
 
-        override fun onQueueChanged(queue: MutableList<MediaSessionCompat.QueueItem>?) {
-            super.onQueueChanged(queue)
-        }
+        override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
 
-        override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
-            Log.e(Constants.TAG, "PlaybackState: " + state?.state)
-
-            val streamPointAsString = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID) ?: "1"
-            val positionData = HashMap<String, Any?>().also { data ->
-                data["streamPoint"] = Integer.parseInt(streamPointAsString)
-                data["streamName"] = metadata?.getString(MediaMetadataCompat.METADATA_KEY_GENRE) ?: "soul"
-            }
+            val positionData = HashMap<String, Any?>()
+            metadata.let {
+                positionData.also { data ->
+                    data["streamPoint"] = Integer.parseInt(it.id)
+                    data["streamName"] = it.genre } }
             updateToFireStoreThePositionData(positionData)
 
-            super.onPlaybackStateChanged(state)
+            super.onPlaybackStateChanged(playback)
         }
     }
 
     private val connectionCallback = object : MediaBrowserCompat.ConnectionCallback() {
         override fun onConnected() {
             super.onConnected()
-            Log.e(Constants.TAG, "ran onConnected")
 
             mediaBrowser.sessionToken.also { token ->
                 val controller = MediaControllerCompat(
@@ -77,7 +64,11 @@ class MainActivity : AppCompatActivity() {
             val controller = MediaControllerCompat
                 .getMediaController(this@MainActivity)
 
-            controller.registerCallback(controllerCallback) }
+            controller.registerCallback(controllerCallback)
+
+
+
+        }
     }
 
     val subscriptionCallback = object : MediaBrowserCompat.SubscriptionCallback(){
@@ -104,46 +95,52 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    fun updateToFireStoreThePositionData(postionData: HashMap<String, Any?>){
+    fun updateToFireStoreThePositionData(positionData: HashMap<String, Any?>){
         db.collection("users")
             .document(auth.currentUser!!.uid)
-            .set(postionData) }
+            .set(positionData) }
 
 
     override fun onStart() {
         super.onStart()
 
-        if(auth.currentUser == null) startSignInProcess()
+        auth.currentUser?.let { startSignInProcess() }
+
         if(!mediaBrowser.isConnected) {
             startService(Intent(this, MediaPlaybackService::class.java))
             mediaBrowser.connect()
-        } }
+        }
+
+    }
 
     override fun onStop() {
-        if(mediaBrowser.isConnected) {
-            mediaBrowser.disconnect()
-        }
-        super.onStop() }
+        if(mediaBrowser.isConnected) mediaBrowser.disconnect()
+
+        super.onStop()
+    }
 
     override fun onPause() {
-        super.onPause() }
+        super.onPause()
+    }
 
     private fun startSignInProcess() {
         val signInIntent = googleSignInClient.signInIntent
-        startActivityForResult(signInIntent, Constants.RC_SIGN_IN)
+        startActivityForResult(signInIntent, Commons.SIGN_IN_REQUEST)
     }
 
     public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
         // if the launch request is a google sign in
-        if (requestCode == Constants.RC_SIGN_IN) {
+        if (requestCode == Commons.SIGN_IN_REQUEST) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(data!!)
             try {
                 val account : GoogleSignInAccount? = task.getResult(ApiException::class.java)
                 firebaseAuthenticationWithGoogle(account!!)
             } catch (e: ApiException){
-                Log.e(Constants.TAG, "ApiException: " + e) } }
+                Log.e(Commons.TAG, "ApiException: " + e)
+            }
+        }
     }
 
     private fun firebaseAuthenticationWithGoogle(acct: GoogleSignInAccount){
@@ -153,7 +150,8 @@ class MainActivity : AppCompatActivity() {
             if (task.isSuccessful) {
                 mediaBrowser.connect()
             }
-            else { } }
+
+        }
     }
 
     override fun onDestroy() {
