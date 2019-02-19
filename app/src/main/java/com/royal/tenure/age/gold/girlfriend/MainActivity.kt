@@ -27,24 +27,38 @@ val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
 class MainActivity : AppCompatActivity() {
 
+    // Todo:
+    // Add support for a toolbar that shows a PlayButton and a looping option for the current song.
+    // Let this toolbar be on the bottom of the MainActivity
+
     lateinit var googleSignInClient : GoogleSignInClient
     lateinit var mediaBrowser : MediaBrowserCompat
 
     val controllerCallback = object : MediaControllerCompat.Callback(){
-        override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
-            super.onMetadataChanged(metadata)
+        var metadata : MediaMetadataCompat? = null
 
-            Log.e(Constants.TAG, "metadata: " + metadata
+        override fun onMetadataChanged(metadataParam: MediaMetadataCompat?) {
+            super.onMetadataChanged(metadataParam)
+
+            Log.e(Constants.TAG, "metadata: " + metadataParam
                 ?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID))
+
+            if(metadata!= null) metadata = metadataParam
         }
 
         override fun onQueueChanged(queue: MutableList<MediaSessionCompat.QueueItem>?) {
             super.onQueueChanged(queue)
         }
+
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             Log.e(Constants.TAG, "PlaybackState: " + state?.state)
 
-
+            val streamPointAsString = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID) ?: "1"
+            val positionData = HashMap<String, Any?>().also { data ->
+                data["streamPoint"] = Integer.parseInt(streamPointAsString)
+                data["streamName"] = metadata?.getString(MediaMetadataCompat.METADATA_KEY_GENRE) ?: "soul"
+            }
+            updateToFireStoreThePositionData(positionData)
 
             super.onPlaybackStateChanged(state)
         }
@@ -90,6 +104,10 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    fun updateToFireStoreThePositionData(postionData: HashMap<String, Any?>){
+        db.collection("users")
+            .document(auth.currentUser!!.uid)
+            .set(postionData) }
 
 
     override fun onStart() {
@@ -97,6 +115,7 @@ class MainActivity : AppCompatActivity() {
 
         if(auth.currentUser == null) startSignInProcess()
         if(!mediaBrowser.isConnected) {
+            startService(Intent(this, MediaPlaybackService::class.java))
             mediaBrowser.connect()
         } }
 

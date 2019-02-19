@@ -1,5 +1,6 @@
 package com.royal.tenure.age.gold.girlfriend
 
+import android.support.v4.media.session.PlaybackStateCompat
 import com.google.firebase.firestore.FirebaseFirestore
 
 public class Constants{
@@ -13,3 +14,12 @@ public class Constants{
         const val ROOT_ID = "610"
     }
 }
+
+val PlaybackStateCompat.isPlaying
+    get() = (state == PlaybackStateCompat.STATE_PLAYING) ||
+            (state == PlaybackStateCompat.STATE_BUFFERING)
+
+val PlaybackStateCompat.isPlayEnabled
+    get() = (actions and PlaybackStateCompat.ACTION_PLAY != 0L) ||
+            ((actions and PlaybackStateCompat.ACTION_PLAY_PAUSE != 0L) &&
+                    (state == PlaybackStateCompat.STATE_PAUSED))
