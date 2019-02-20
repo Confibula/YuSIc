@@ -1,7 +1,9 @@
 package com.royal.tenure.age.gold.girlfriend
 
 import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.widget.MediaController
 import com.google.firebase.auth.FirebaseAuth
 
 class Commons{
@@ -40,3 +42,4 @@ val MediaMetadataCompat.title
     get() = getString(MediaMetadataCompat.METADATA_KEY_TITLE)
 
 val auth: FirebaseAuth = FirebaseAuth.getInstance()
+

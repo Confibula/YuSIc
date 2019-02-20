@@ -4,6 +4,7 @@ import android.app.*
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
+import android.media.browse.MediaBrowser
 import android.net.Uri
 import android.os.*
 import android.support.v4.media.MediaBrowserCompat
@@ -27,7 +28,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 @RequiresApi(Build.VERSION_CODES.O)
 class MediaPlaybackService : MediaBrowserServiceCompat() {
-    val db : FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val db : FirebaseFirestore = FirebaseFirestore.getInstance()
 
     private val exoPlayer : ExoPlayer by lazy {
         ExoPlayerFactory.newSimpleInstance(this) }
@@ -46,7 +47,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // Creating the channel
             val mChannel = NotificationChannel(
                 Commons.NOTIFICATION_CHANNEL,
-                getString(R.string.adjust),
+                getString(R.string.notification_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply { description = getString(R.string.description) }
             notificationManager.createNotificationChannel(mChannel)
@@ -69,7 +70,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     private var metadatas: HashMap<String, MediaMetadataCompat> = HashMap()
     val streamCount = 55L
-    fun createMetadatas(){
+    fun fetchMetadatas(){
         db.collection("users")
             .document(auth.currentUser!!.uid)
             .collection("positions")
@@ -114,10 +115,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
-        createMetadatas()
+        fetchMetadatas()
 
         // Todo:
-        // ContentProvider for Sonos and for your apps metadata
+        // ContentProvider for Sonos and for your apps latest metadata
 
         val sessionIntent = packageManager?.getLaunchIntentForPackage(packageName)
         val sessionActivityPendingIntent = PendingIntent.getActivity(this, 0, sessionIntent, 0)
@@ -243,6 +244,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         // Support fetching the list of items belonging to the root!
 
 
+        val streams : MutableList<MediaBrowserCompat.MediaItem> = mutableListOf()
+        browseTree[Commons.ROOT_ID]?.map { stream ->
+            streams.add(MediaBrowserCompat.MediaItem(stream.description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE))
+        }
+        result.sendResult(streams)
+
     }
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? {
         return BrowserRoot(Commons.ROOT_ID, null)
@@ -296,11 +303,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             return notificationBuilder.apply {
                 setContentText(metadata.artist)
                 setContentTitle(metadata.title)
-
-                // Todo:
-                // right now the notification can't show any image.
-                // How do you fix this without making your app run slowly,
-                // doing ASyncTasks for bitmaps . . .
 
                 if(playback.isPlaying){
                     addAction(R.drawable.exo_controls_pause, applicationContext.getString(R.string.pause), MediaButtonReceiver

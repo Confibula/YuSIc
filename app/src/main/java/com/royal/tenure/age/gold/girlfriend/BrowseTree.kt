@@ -11,25 +11,27 @@ class BrowseTree(metadatas: HashMap<String, MediaMetadataCompat>, info: Bundle) 
 
 
     init {
-        metadatas.forEach { mediaItem ->
-            val streamName = mediaItem.value.getString(MediaMetadataCompat.METADATA_KEY_GENRE)
+        metadatas.forEach { songMap ->
+            val song = songMap.value
+            val genre = song.genre
             val streamies : MutableList<MediaMetadataCompat>
-                    = children[streamName] ?: buildStreamies(mediaItem.value)
-            streamies.add(mediaItem.value)
+                    = children[genre] ?: buildStreamies(song)
+            streamies.add(song)
         }
 
     }
     fun buildStreamies(metadata: MediaMetadataCompat) : MutableList<MediaMetadataCompat>{
-        val streamName = metadata.getString(MediaMetadataCompat.METADATA_KEY_GENRE)
+        val genre = metadata.genre
         val stream = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, streamName)
+            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, genre)
             .build()
 
-        val root = children[Commons.ROOT_ID] ?: mutableListOf()
-        root.add(stream)
+        val streams = children[Commons.ROOT_ID] ?: mutableListOf()
+        streams.add(stream)
+        children[Commons.ROOT_ID] = streams
 
         return mutableListOf<MediaMetadataCompat>().also { streamies ->
-            children[streamName] = streamies
+            children[genre] = streamies
         }
     }
 }

@@ -1,8 +1,9 @@
 <resources>
     <string name="app_name">YuSIc</string>
     <string name="server_id">639083721163-hqa9p4n7a4tjq32rvp829g9huf3j7dqh.apps.googleusercontent.com</string>
-    <string name="adjust">Adjustment</string>
+    <string name="notification_name">Adjustment</string>
     <string name="description">Make an adjustment</string>
     <string name="pause">Pause</string>
     <string name="play">Play</string>
+    <string name="repeat">Repeat</string>
 </resources>
