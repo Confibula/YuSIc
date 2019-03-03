@@ -6,13 +6,15 @@
 
     <item
             android:id="@+id/play_button"
-            android:title="@string/play"
+            android:title="@string/play_pause"
+            android:icon="@drawable/exo_controls_play"
             app:showAsAction="ifRoom" />
 
     <item
-            android:title="@string/repeat"
             android:id="@+id/repeat_button"
-            app:showAsAction="ifRoom"/>
+            android:title="@string/repeat"
+            android:icon="@drawable/exo_controls_repeat_off"
+            app:showAsAction="ifRoom" />
 
 
 </menu>

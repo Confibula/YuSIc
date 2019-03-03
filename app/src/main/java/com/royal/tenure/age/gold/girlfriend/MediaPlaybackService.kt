@@ -15,6 +15,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ServiceCompat.stopForeground
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
@@ -22,13 +23,18 @@ import com.google.android.exoplayer2.util.Util
 import com.google.android.exoplayer2.util.Log
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
+import com.google.android.exoplayer2.offline.DownloadService.startForeground
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.gms.flags.Singletons
 import com.google.firebase.firestore.FirebaseFirestore
+import java.lang.Exception
 
 @RequiresApi(Build.VERSION_CODES.O)
 class MediaPlaybackService : MediaBrowserServiceCompat() {
     private val db : FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    private var browseTree: BrowseTree = BrowseTree()
 
     private val exoPlayer : ExoPlayer by lazy {
         ExoPlayerFactory.newSimpleInstance(this) }
@@ -68,54 +74,76 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         exoPlayer.stop(true)
     }
 
-    private var metadatas: HashMap<String, MediaMetadataCompat> = HashMap()
+    // Fetched data
+    private var metadatas: MutableList<MediaMetadataCompat> = mutableListOf()
     val streamCount = 55L
-    fun fetchMetadatas(){
-        db.collection("users")
-            .document(auth.currentUser!!.uid)
-            .collection("positions")
-            .get().addOnSuccessListener { positions ->
-                for(position in positions){
-                    val positionData: Map<String, Any> = position.data
-                    val streamPoint = positionData["streamPoint"] as Int
-                    val streamName = positionData["streamName"]
+    var positions : MutableList<HashMap<String, Any>> = mutableListOf()
+    fun fetchPositions(){
 
-                    // Start the fetching
-                    db.collection("stream")
-                        .whereEqualTo("genre", streamName)
-                        .startAt(streamPoint)
-                        .limit(streamCount)
-                        .get()
-                        .addOnSuccessListener {documents ->
-                            for(document in documents){
-                                val song: Map<String, Any> = document.data
-                                val bitmap = song["image"] as String
-                                val source = song["source"] as String
-                                val creator = song["creator"] as String
-                                val title = song["title"] as String
-                                val id = song["id"] as String
-                                val genre = song["genre"] as String
-
-                                val data : MediaMetadataCompat =
-                                    MediaMetadataCompat.Builder()
-                                        .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, source)
-                                        .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, bitmap)
-                                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, creator)
-                                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
-                                        .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
-                                        .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
-                                        .build()
-                                metadatas[id] = data
-                            }
-                        }.addOnFailureListener {exception ->
-                            Log.e(Commons.TAG, "failed to read from FireStore: " + exception) }
+        db.collection("genres")
+            .get()
+            .addOnSuccessListener { datas ->
+                for (data in datas){
+                    val info  : Map<String, Any> = data.data
+                    val position : HashMap<String, Any> = HashMap()
+                    position["genre"] = info["genre"] as String
+                    position["id"] = 1
+                    positions.add(position)
                 }
+
+            }.continueWithTask{
+                db.collection("users")
+                    .document(auth.currentUser!!.uid)
+                    .collection("positions")
+                    .get().addOnSuccessListener { datas ->
+                        for(data in datas) {
+                            val info : Map<String, Any> = data.data
+                            val position : HashMap<String, Any> = HashMap()
+                            position["genre"] = info["genre"] as String
+                            position["id"] = info["id"] as Int
+
+                            positions.find {
+                                it.containsValue(position["genre"])
+                            }?.apply {
+                                replace("id", position["id"]!!)
+                            }
+
+                        }
+            } }.continueWithTask {
+                db.collection("stream")
+                    .get()
+                    .addOnSuccessListener {datas ->
+                        for(data in datas){
+                            val song: Map<String, Any> = data.data
+                            val bitmap = song["image"] as String
+                            val source = song["source"] as String
+                            val creator = song["creator"] as String
+                            val title = song["title"] as String
+                            val id = song["id"] as String
+                            val genre = song["genre"] as String
+                            val metadata : MediaMetadataCompat =
+                                MediaMetadataCompat.Builder()
+                                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, source)
+                                    .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, bitmap)
+                                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, creator)
+                                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
+                                    .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
+                                    .build()
+                            metadatas.add(metadata)
+                        }
+                    }.addOnFailureListener {exception ->
+                        Log.e(Commons.TAG, "failed to read from FireStore: %e", exception)
+                    }
+            }.continueWith {
+                browseTree.update(metadatas, positions)
+                notifyChildrenChanged(Commons.ROOT_ID)
             }
     }
 
     override fun onCreate() {
         super.onCreate()
-        fetchMetadatas()
+        fetchPositions()
 
         // Todo:
         // ContentProvider for Sonos and for your apps latest metadata
@@ -134,6 +162,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         notificationManager = NotificationManagerCompat.from(this)
 
         receiver = MyReceiver(controller)
+
+        this@MediaPlaybackService
+            .registerReceiver(receiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
 
         exoPlayer.addListener(playerEventListener)
 
@@ -183,10 +214,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             player!!.repeatMode = Player.REPEAT_MODE_ONE
 
         }
-    }
-
-    private val browseTree: BrowseTree by lazy {
-        BrowseTree(metadatas, Bundle())
     }
 
     var playbackPreparer = object : MediaSessionConnector.PlaybackPreparer {
@@ -255,6 +282,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         return BrowserRoot(Commons.ROOT_ID, null)
     }
     override fun onDestroy() {
+        this@MediaPlaybackService
+            .unregisterReceiver(receiver)
+
         super.onDestroy()
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -275,26 +305,29 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
-
+            metadata?.also {
+                notificationManager.notify(Commons.NOTIFICATION_ID, notification())
+            }
         }
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(playback)
+
+            Log.e(Commons.TAG, "playbackstate: " + playback?.state)
 
             playback?.let { this.playback = it }
 
             when(playback?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
                     startForeground(Commons.NOTIFICATION_ID, notification())
-                    this@MediaPlaybackService
-                        .registerReceiver(receiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
                 }
                 else -> {
-                    stopForeground(false)
-                    this@MediaPlaybackService
-                        .unregisterReceiver(receiver)
-                    if(playback?.state == PlaybackStateCompat.STATE_NONE){
-                        stopSelf()
+                    if(inForeground){
+                        stopForeground(false)
+                        notificationManager.notify(Commons.NOTIFICATION_ID, notification())
+                        if(playback?.state == PlaybackStateCompat.STATE_NONE){
+                            stopSelf()
+                        }
                     }
                 }
             }
@@ -316,5 +349,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             }.build()
         }
     }
+
+    var inForeground : Boolean = false
 }
 

@@ -3,22 +3,24 @@ package com.royal.tenure.age.gold.girlfriend
 import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
 
-class BrowseTree(metadatas: HashMap<String, MediaMetadataCompat>, info: Bundle) {
+class BrowseTree() {
 
     // This is the ingenious code
     private val children = mutableMapOf<String, MutableList<MediaMetadataCompat>>()
     operator fun get(node: String?) = children[node]
 
 
-    init {
-        metadatas.forEach { songMap ->
-            val song = songMap.value
+    fun update(metadatas: MutableList<MediaMetadataCompat>, positions : MutableList<HashMap<String, Any>>){
+        metadatas.forEach { song ->
             val genre = song.genre
             val streamies : MutableList<MediaMetadataCompat>
                     = children[genre] ?: buildStreamies(song)
-            streamies.add(song)
-        }
 
+            val position = positions.find {
+                it.containsValue(genre)
+            }
+            if(Integer.parseInt(song.id) >= position!!["id"] as Int) streamies.add(song)
+        }
     }
     fun buildStreamies(metadata: MediaMetadataCompat) : MutableList<MediaMetadataCompat>{
         val genre = metadata.genre
