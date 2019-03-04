@@ -76,7 +76,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     // Fetched data
     private var metadatas: MutableList<MediaMetadataCompat> = mutableListOf()
-    val streamCount = 55L
+    val streamCount = 55
     var positions : MutableList<HashMap<String, Any>> = mutableListOf()
     fun fetchPositions(){
 
@@ -211,7 +211,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun getCommands(): Array<String>? = null
 
         override fun onSetRepeatMode(player: Player?, repeatMode: Int){
-            player!!.repeatMode = Player.REPEAT_MODE_ONE
+            player!!.repeatMode = repeatMode
 
         }
     }

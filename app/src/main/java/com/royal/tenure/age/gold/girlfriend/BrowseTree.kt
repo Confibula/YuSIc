@@ -17,9 +17,10 @@ class BrowseTree() {
                     = children[genre] ?: buildStreamies(song)
 
             val position = positions.find {
-                it.containsValue(genre)
-            }
-            if(Integer.parseInt(song.id) >= position!!["id"] as Int) streamies.add(song)
+                it.containsValue(genre) }
+            if(streamies.size == 55)
+            else if(Integer.parseInt(song.id) >= position!!["id"] as Int) streamies.add(song)
+            else return
         }
     }
     fun buildStreamies(metadata: MediaMetadataCompat) : MutableList<MediaMetadataCompat>{

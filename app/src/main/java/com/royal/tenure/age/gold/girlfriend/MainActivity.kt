@@ -52,20 +52,15 @@ class MainActivity : AppCompatActivity() {
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
             metadata?.also {
-
-                Glide
-                    .with(this@MainActivity)
-                    .load(it.mediaUri)
-                    .into(findViewById(R.id.image_view))
-                supportActionBar?.title = it.title
-
                 this@MainActivity.metadata = it
+                viewModel.putMetadata(it)
             }
         }
 
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
             playback?.also {
                 this@MainActivity.playback = it
+                viewModel.putPlayback(it)
             }
 
             val positionData = HashMap<String, Any?>()
@@ -107,7 +102,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        MenuInflater(this).inflate(R.menu.menu_main, menu)
+        MenuInflater(this).inflate(R.menu.menu_main, menu).also {
+            menu!!.findItem(R.id.play_button).icon
+            menu!!.findItem(R.id.repeat_button).icon
+        }
         // Probably tells it to create. False means 'not create'
 
         return true
@@ -131,63 +129,13 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    inner class StreamAdapter : ListAdapter<MediaBrowserCompat.MediaItem, StreamAdapter.MyViewHolder>(DIFF_CALLBACK) {
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
-            val streamView = LayoutInflater.from(parent.context)
-                .inflate(R.layout.stream, parent, false) as TextView
-
-            Log.e(Commons.TAG, "ran onCreateView")
-
-            return MyViewHolder(streamView)
-        }
-
-        override fun getItemCount(): Int {
-            if(streams != null) {
-                return streams!!.size
-            }
-            else {
-                return 0
-            }
-        }
-
-        fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-            val theStream = holder.stream
-            val streamId = streams!![position].description.mediaId
-            theStream.text = streamId
-
-            onBindViewHolder(holder, position)
-
-            theStream.setOnClickListener {
-                if(playback.isPlayEnabled){
-                    MediaControllerCompat
-                        .getMediaController(this@MainActivity)
-                        .transportControls.playFromMediaId(streamId, null)
-                }
-                if(playback.isPlaying){
-                    MediaControllerCompat
-                        .getMediaController(this@MainActivity)
-                        .transportControls.playFromMediaId(streamId, null)
-                }
-            }
-        }
-
-        inner class MyViewHolder(val stream: TextView,
-                                 val itemClickedListener: : (MediaItemData) -> Unit) : RecyclerView.ViewHolder(stream){
-            val name = StreamModel.stream.text
-
-            init {
-
-            }
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         viewModel = ViewModelProviders.of(this).get(StreamModel::class.java)
         setSupportActionBar(findViewById(R.id.toolbar_view))
+        supportActionBar!!.setDisplayShowTitleEnabled(false)
 
         mediaBrowser = MediaBrowserCompat(this,
             ComponentName(this, MediaPlaybackService::class.java),
@@ -195,7 +143,11 @@ class MainActivity : AppCompatActivity() {
             null)
 
         val recyclerView = findViewById<RecyclerView>(R.id.recycler_view).apply {
-            adapter = StreamAdapter()
+            adapter = StreamAdapter().also {adapter ->
+                viewModel.streams.observe(this@MainActivity, Observer { list ->
+                    adapter.submitList(list)
+                })
+            }
             layoutManager = LinearLayoutManager(
                 this@MainActivity,
                 LinearLayoutManager.HORIZONTAL,

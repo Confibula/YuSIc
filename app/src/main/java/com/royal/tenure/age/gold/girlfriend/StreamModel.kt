@@ -1,6 +1,7 @@
 package com.royal.tenure.age.gold.girlfriend
 
 import android.content.Context
+import android.drm.DrmStore
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.support.v4.media.MediaBrowserCompat
@@ -14,18 +15,39 @@ import androidx.lifecycle.ViewModel
 import com.bumptech.glide.Glide.init
 
 class StreamModel : ViewModel() {
-    private val _streams = MutableLiveData<List<MediaBrowserCompat.MediaItem>>()
+    private val _streams = MutableLiveData<List<Stream>>()
         .apply { postValue(emptyList()) }
 
-    val streams: LiveData<List<MediaBrowserCompat.MediaItem>> = _streams
+    val streams: LiveData<List<Stream>> = _streams
 
-    fun fetch() : LiveData<List<MediaBrowserCompat.MediaItem>> {
-        return streams
-    }
+    val playbackState = MutableLiveData<PlaybackStateCompat>()
+        .apply { postValue(
+            PlaybackStateCompat.Builder().build()
+        ) }
+
+    val nowPlaying = MutableLiveData<MediaMetadataCompat>()
+        .apply { postValue(
+            MediaMetadataCompat.Builder().build()
+        ) }
 
     fun putStreams(streams: MutableList<MediaBrowserCompat.MediaItem>){
-        this._streams.postValue(streams)
+        val list = streams.map { stream ->
+            Stream(stream.mediaId as String, R.color.colorAccent)
+        }
+
+        this._streams.postValue(list)
 
         Log.e(Commons.TAG, "ran putStreams: " + streams.size)
     }
+
+    fun putMetadata(metadata: MediaMetadataCompat){
+        nowPlaying.postValue(metadata)
+
+
+    }
+
+    fun putPlayback(playback: PlaybackStateCompat){
+        playbackState.postValue(playback)
+    }
+
 }

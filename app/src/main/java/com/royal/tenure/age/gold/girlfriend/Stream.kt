@@ -5,13 +5,13 @@ import androidx.recyclerview.widget.DiffUtil
 
 data class Stream(
     val mediaId: String,
-    var playbackRes: Int) {
+    var color: Int) {
 
     companion object {
         /**
          * Indicates [playbackRes] has changed.
          */
-        const val PLAYBACK_RES_CHANGED = 1
+        const val PLAYING_COLOR = R.color.abc_primary_text_material_light
 
         val diffCallback = object : DiffUtil.ItemCallback<Stream>() {
             override fun areItemsTheSame(oldItem: Stream,
@@ -19,11 +19,11 @@ data class Stream(
                 oldItem.mediaId == newItem.mediaId
 
             override fun areContentsTheSame(oldItem: Stream, newItem: Stream) =
-                oldItem.mediaId == newItem.mediaId && oldItem.playbackRes == newItem.playbackRes
+                oldItem.mediaId == newItem.mediaId && oldItem.color == newItem.color
 
             override fun getChangePayload(oldItem: Stream, newItem: Stream) =
-                if (oldItem.playbackRes != newItem.playbackRes) {
-                    PLAYBACK_RES_CHANGED
+                if (oldItem.color != newItem.color) {
+                    PLAYING_COLOR
                 } else null
         }
     }
