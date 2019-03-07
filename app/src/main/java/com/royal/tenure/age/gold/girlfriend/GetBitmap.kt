@@ -1,17 +1,15 @@
 package com.royal.tenure.age.gold.girlfriend
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.AsyncTask
-import android.util.Log
 import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-class GetBitmap() : AsyncTask<String, Void, MutableList<Bitmap>>(){
+class GetBitmap : AsyncTask<String, Void, MutableList<Bitmap>>(){
     override fun doInBackground(vararg bitmapUris: String?): MutableList<Bitmap> {
         var inputStream: InputStream? = null
         var bitmaps : MutableList<Bitmap> = mutableListOf()
@@ -41,11 +39,6 @@ class GetBitmap() : AsyncTask<String, Void, MutableList<Bitmap>>(){
 
     override fun onPostExecute(result: MutableList<Bitmap>) {
         super.onPostExecute(result)
-    }
-
-    fun example(){
-        val bitmaps : MutableList<Bitmap> = GetBitmap().execute("test", "test2").get()
-        val bitmap = bitmaps[5]
     }
 
 }

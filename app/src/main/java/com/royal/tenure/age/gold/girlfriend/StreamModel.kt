@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.core.graphics.drawable.toBitmap
@@ -13,6 +14,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.bumptech.glide.Glide.init
+import com.google.android.gms.common.internal.service.Common
 
 class StreamModel : ViewModel() {
     private val _streams = MutableLiveData<List<Stream>>()
@@ -25,14 +27,27 @@ class StreamModel : ViewModel() {
             PlaybackStateCompat.Builder().build()
         ) }
 
+    val controller = MutableLiveData<MediaControllerCompat>()
+        .apply { postValue(
+            null
+        ) }
+
     val nowPlaying = MutableLiveData<MediaMetadataCompat>()
         .apply { postValue(
             MediaMetadataCompat.Builder().build()
         ) }
 
+    val image = MutableLiveData<Bitmap>()
+        .apply { postValue(
+            null
+        ) }
+
+    val playbutton_res = MutableLiveData<Int>()
+        .apply { postValue(R.drawable.exo_controls_play) }
+
     fun putStreams(streams: MutableList<MediaBrowserCompat.MediaItem>){
         val list = streams.map { stream ->
-            Stream(stream.mediaId as String, R.color.colorAccent)
+            Stream(stream.mediaId!!, getStreamColor(stream.mediaId!!))
         }
 
         this._streams.postValue(list)
@@ -40,14 +55,46 @@ class StreamModel : ViewModel() {
         Log.e(Commons.TAG, "ran putStreams: " + streams.size)
     }
 
+    fun putController(controller : MediaControllerCompat){
+        this.controller.postValue(controller)
+    }
+
     fun putMetadata(metadata: MediaMetadataCompat){
         nowPlaying.postValue(metadata)
 
-
+        // Todo:
+        // Receive the bitmap for the metadata
     }
 
     fun putPlayback(playback: PlaybackStateCompat){
         playbackState.postValue(playback)
+
+        if(playback.isPlaying) playbutton_res.postValue(R.drawable.exo_controls_pause)
+    }
+
+    fun getStreamColor(stream: String) : Int {
+        if(nowPlaying.value!!.genre == stream) {
+            return R.color.colorPrimaryDark
+        }
+        else {
+            return R.color.colorAccent
+        }
+    }
+
+    fun play(stream: Stream){
+        if (stream.mediaId == nowPlaying.value!!.id) {
+            when {
+                playbackState.value!!.isPlaying -> controller.value!!.transportControls.pause()
+                playbackState.value!!.isPlayEnabled -> controller.value!!.transportControls.play()
+                else -> {
+                    Log.w(Commons.TAG,
+                        "Playable item clicked but neither play nor pause are enabled!"
+                                + " (mediaId=${stream.mediaId})") }
+            }
+        } else {
+            controller.value!!.transportControls.playFromMediaId(stream.mediaId, null)
+        }
     }
 
 }
+

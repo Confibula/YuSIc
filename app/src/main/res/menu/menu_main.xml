@@ -10,11 +10,5 @@
             android:icon="@drawable/exo_controls_play"
             app:showAsAction="ifRoom" />
 
-    <item
-            android:id="@+id/repeat_button"
-            android:title="@string/repeat"
-            android:icon="@drawable/exo_controls_repeat_off"
-            app:showAsAction="ifRoom" />
-
 
 </menu>

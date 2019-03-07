@@ -3,6 +3,8 @@ package com.royal.tenure.age.gold.girlfriend
 import android.app.*
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.media.browse.MediaBrowser
 import android.net.Uri
@@ -16,6 +18,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat.stopForeground
+import androidx.core.graphics.get
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
@@ -28,7 +31,12 @@ import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
 import com.google.android.gms.flags.Singletons
 import com.google.firebase.firestore.FirebaseFirestore
+import java.io.BufferedInputStream
+import java.io.IOException
+import java.io.InputStream
 import java.lang.Exception
+import java.net.HttpURLConnection
+import java.net.URL
 
 @RequiresApi(Build.VERSION_CODES.O)
 class MediaPlaybackService : MediaBrowserServiceCompat() {
@@ -66,7 +74,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var dataFactory: DefaultDataSourceFactory
     private lateinit var notificationManager: NotificationManagerCompat
     private lateinit var receiver: MyReceiver
-    private lateinit var metadata: MediaMetadataCompat
+    private var metadata: MediaMetadataCompat? = null
+    private var playback : PlaybackStateCompat = PlaybackStateCompat.Builder().build()
 
     override fun onTaskRemoved(rootIntent: Intent) {
         super.onTaskRemoved(rootIntent)
@@ -76,7 +85,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     // Fetched data
     private var metadatas: MutableList<MediaMetadataCompat> = mutableListOf()
-    val streamCount = 55
     var positions : MutableList<HashMap<String, Any>> = mutableListOf()
     fun fetchPositions(){
 
@@ -186,14 +194,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun onPause(player: Player?) {
             player!!.playWhenReady = false
-
         }
 
         override fun onFastForward(player: Player?) = Unit
 
         override fun onPlay(player: Player?) {
             player!!.playWhenReady = true
-
         }
 
         override fun onStop(player: Player?) {
@@ -254,7 +260,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             when(playbackState){
                 Player.STATE_READY -> {
-                    mediaSession.setMetadata(metadata)
+
+
                 }
                 Player.STATE_ENDED -> {
 
@@ -301,13 +308,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     // This is my second controller. I was worrying whether this is bad code,
     // am now fairly confident, it's completely fine!
     val mCallback: MediaControllerCompat.Callback = object : MediaControllerCompat.Callback(){
-        lateinit var playback : PlaybackStateCompat
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
-            metadata?.also {
-                notificationManager.notify(Commons.NOTIFICATION_ID, notification())
-            }
+
+            metadata.let { this@MediaPlaybackService.metadata = it }
         }
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
@@ -315,13 +320,18 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             Log.e(Commons.TAG, "playbackstate: " + playback?.state)
 
-            playback?.let { this.playback = it }
+            playback?.let {
+                this@MediaPlaybackService.playback = it
+            }
 
             when(playback?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
                     startForeground(Commons.NOTIFICATION_ID, notification())
+
+                    Log.e(Commons.TAG, "reach state-playing code block")
                 }
                 else -> {
+                    Log.e(Commons.TAG, "reach state-other code block")
                     if(inForeground){
                         stopForeground(false)
                         notificationManager.notify(Commons.NOTIFICATION_ID, notification())
@@ -332,22 +342,29 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 }
             }
         }
-        fun notification(): Notification{
-            return notificationBuilder.apply {
-                setContentText(metadata.artist)
-                setContentTitle(metadata.title)
+    }
 
-                if(playback.isPlaying){
-                    addAction(R.drawable.exo_controls_pause, applicationContext.getString(R.string.pause), MediaButtonReceiver
-                        .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PAUSE))
-                }
-                if(playback.isPlayEnabled){
-                    addAction(R.drawable.exo_controls_play, applicationContext.getString(R.string.play), MediaButtonReceiver
-                        .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PLAY))
-                }
+    fun notification(): Notification{
+        return notificationBuilder.apply {
+            setContentText(metadata!!.artist)
+            setContentTitle(metadata!!.title)
 
-            }.build()
-        }
+
+            Log.e(Commons.TAG, "ran notification creation")
+
+            // Todo:
+            // Receive the bitmap for the metadata in the notification
+
+            if(playback.isPlaying){
+                addAction(R.drawable.exo_controls_pause, applicationContext.getString(R.string.pause), MediaButtonReceiver
+                    .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PAUSE))
+            }
+            else if(playback.isPlayEnabled){
+                addAction(R.drawable.exo_controls_play, applicationContext.getString(R.string.play), MediaButtonReceiver
+                    .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PLAY))
+            }
+
+        }.build()
     }
 
     var inForeground : Boolean = false

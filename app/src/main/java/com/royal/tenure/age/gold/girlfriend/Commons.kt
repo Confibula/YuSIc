@@ -41,5 +41,8 @@ val MediaMetadataCompat.artist
 val MediaMetadataCompat.title
     get() = getString(MediaMetadataCompat.METADATA_KEY_TITLE)
 
+val MediaMetadataCompat.bitmap
+    get() = getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
+
 val auth: FirebaseAuth = FirebaseAuth.getInstance()
 

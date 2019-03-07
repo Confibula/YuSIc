@@ -45,28 +45,28 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mediaBrowser : MediaBrowserCompat
     private lateinit var viewModel: StreamModel
     private var playback: PlaybackStateCompat = PlaybackStateCompat.Builder().build()
-    private lateinit var metadata : MediaMetadataCompat
+    private var metadata : MediaMetadataCompat? = null
 
     val controllerCallback = object : MediaControllerCompat.Callback(){
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
-            metadata?.also {
+            metadata?.let {
                 this@MainActivity.metadata = it
                 viewModel.putMetadata(it)
             }
         }
 
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
-            playback?.also {
+            playback?.let {
                 this@MainActivity.playback = it
                 viewModel.putPlayback(it)
             }
 
             val positionData = HashMap<String, Any?>()
-            metadata.also {
+            metadata?.let {
                 positionData.also { data ->
-                    data["id"] = Integer.parseInt(it.id)
+                    data["id"] = it.id
                     data["genre"] = it.genre } }
             updateToFireStoreThePositionData(positionData)
 
@@ -86,6 +86,8 @@ class MainActivity : AppCompatActivity() {
             val controller = MediaControllerCompat
                 .getMediaController(this@MainActivity)
 
+            viewModel.putController(controller)
+
             controller.registerCallback(controllerCallback)
 
             mediaBrowser.subscribe(Commons.ROOT_ID, subscriptionCallback)
@@ -103,8 +105,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         MenuInflater(this).inflate(R.menu.menu_main, menu).also {
-            menu!!.findItem(R.id.play_button).icon
-            menu!!.findItem(R.id.repeat_button).icon
+            menu!!.findItem(R.id.play_button).icon = getDrawable(viewModel.playbutton_res.value!!)
         }
         // Probably tells it to create. False means 'not create'
 
@@ -118,10 +119,14 @@ class MainActivity : AppCompatActivity() {
         Log.e(Commons.TAG, "ran onOptionsItemSelected")
         when(id){
             R.id.play_button -> {
-
-            }
-            R.id.repeat_button -> {
-
+                if(playback.isPlaying) {
+                    controller.transportControls.pause()
+                    item.icon = getDrawable(R.drawable.exo_controls_play)
+                }
+                else if(playback.isPlayEnabled) {
+                    controller.transportControls.play()
+                    item.icon = getDrawable(R.drawable.exo_controls_pause)
+                }
             }
             else -> return true
         }
@@ -135,15 +140,28 @@ class MainActivity : AppCompatActivity() {
 
         viewModel = ViewModelProviders.of(this).get(StreamModel::class.java)
         setSupportActionBar(findViewById(R.id.toolbar_view))
-        supportActionBar!!.setDisplayShowTitleEnabled(false)
+
+        viewModel.nowPlaying.observe(this@MainActivity, Observer { metadata ->
+            supportActionBar!!.apply {
+                title = metadata.title
+                subtitle = metadata.artist
+            }
+        })
+
+        // Todo: Will this really work?
+        findViewById<ImageView>(R.id.image_view).apply {
+            viewModel.image.observe(this@MainActivity, Observer { image ->
+                this.setImageBitmap(image)
+            })
+        }
 
         mediaBrowser = MediaBrowserCompat(this,
             ComponentName(this, MediaPlaybackService::class.java),
             connectionCallback,
             null)
 
-        val recyclerView = findViewById<RecyclerView>(R.id.recycler_view).apply {
-            adapter = StreamAdapter().also {adapter ->
+        findViewById<RecyclerView>(R.id.recycler_view).apply {
+            adapter = StreamAdapter{ stream -> viewModel.play(stream) }.also {adapter ->
                 viewModel.streams.observe(this@MainActivity, Observer { list ->
                     adapter.submitList(list)
                 })
