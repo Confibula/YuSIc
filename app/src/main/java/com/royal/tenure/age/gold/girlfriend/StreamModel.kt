@@ -84,8 +84,14 @@ class StreamModel : ViewModel() {
     fun play(stream: Stream){
         if (stream.mediaId == nowPlaying.value!!.id) {
             when {
-                playbackState.value!!.isPlaying -> controller.value!!.transportControls.pause()
-                playbackState.value!!.isPlayEnabled -> controller.value!!.transportControls.play()
+                playbackState.value!!.isPlaying -> {
+                    controller.value!!.transportControls.pause()
+                    Log.e(Commons.TAG, "paused playback")
+                }
+                playbackState.value!!.isPlayEnabled -> {
+                    controller.value!!.transportControls.play()
+                    Log.e(Commons.TAG, "played playback")
+                }
                 else -> {
                     Log.w(Commons.TAG,
                         "Playable item clicked but neither play nor pause are enabled!"
@@ -93,6 +99,7 @@ class StreamModel : ViewModel() {
             }
         } else {
             controller.value!!.transportControls.playFromMediaId(stream.mediaId, null)
+            Log.e(Commons.TAG, "played playback anew")
         }
     }
 

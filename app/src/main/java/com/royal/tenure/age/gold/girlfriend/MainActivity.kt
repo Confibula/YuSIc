@@ -63,12 +63,15 @@ class MainActivity : AppCompatActivity() {
                 viewModel.putPlayback(it)
             }
 
+            // Todo:
+            // Position data is not updated!!!
             val positionData = HashMap<String, Any?>()
             metadata?.let {
                 positionData.also { data ->
                     data["id"] = it.id
-                    data["genre"] = it.genre } }
-            updateToFireStoreThePositionData(positionData)
+                    data["genre"] = it.genre }
+                updateToFireStoreThePositionData(positionData)
+            }
 
             super.onPlaybackStateChanged(playback)
         }
@@ -184,7 +187,10 @@ class MainActivity : AppCompatActivity() {
         db.collection("users")
             .document(auth.currentUser!!.uid)
             .collection("positions")
-            .add(positionData) }
+            .add(positionData)
+            .addOnFailureListener{
+                Log.e(Commons.TAG, "failed to write position data: %e", it)
+            }}
 
 
     override fun onStart() {
@@ -231,6 +237,7 @@ class MainActivity : AppCompatActivity() {
 
         auth.signInWithCredential(credential).addOnCompleteListener { task ->
             if (task.isSuccessful) {
+                startService(Intent(this, MediaPlaybackService::class.java))
                 mediaBrowser.connect()
             }
         }

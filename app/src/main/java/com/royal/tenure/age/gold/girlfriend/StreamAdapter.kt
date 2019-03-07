@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.pm.PackageManager
 import android.os.Build
 import android.service.voice.AlwaysOnHotwordDetector
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -37,6 +38,11 @@ class StreamAdapter(val streamClickListener: (Stream) -> Unit) : ListAdapter<Str
         payloads.forEach{payload ->
             when (payload) {
                 PLAYING_COLOR -> {
+
+                    // Todo:
+                    // Make the color change when playback changes
+                    Log.e(Commons.TAG, "changed the color")
+
                     holder.title.setTextColor(
                         ContextCompat.getColor(Application().baseContext, PLAYING_COLOR)
                     )

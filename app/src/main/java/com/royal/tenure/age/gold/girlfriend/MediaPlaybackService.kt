@@ -6,6 +6,7 @@ import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
+import android.media.MediaMetadataRetriever
 import android.media.browse.MediaBrowser
 import android.net.Uri
 import android.os.*
@@ -57,7 +58,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             setStyle(androidx.media.app.NotificationCompat.MediaStyle()
                 .setMediaSession(mediaSession.sessionToken)
-                .setShowActionsInCompactView(0))
+                //.setShowActionsInCompactView(0)
+            )
             setContentIntent(controller.sessionActivity)
 
             // Creating the channel
@@ -67,6 +69,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 NotificationManager.IMPORTANCE_LOW
             ).apply { description = getString(R.string.description) }
             notificationManager.createNotificationChannel(mChannel)
+            setChannelId(Commons.NOTIFICATION_CHANNEL)
         }
     }
 
@@ -76,14 +79,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var dataFactory: DefaultDataSourceFactory
     private lateinit var notificationManager: NotificationManagerCompat
     private lateinit var receiver: MyReceiver
-    private var metadata: MediaMetadataCompat? = null
+    private var metadata: MediaMetadataCompat = MediaMetadataCompat.Builder().build()
     private var playback : PlaybackStateCompat = PlaybackStateCompat.Builder().build()
 
-    override fun onTaskRemoved(rootIntent: Intent) {
-        super.onTaskRemoved(rootIntent)
 
-        exoPlayer.stop(true)
-    }
 
     // Fetched data
     private var metadatas: MutableList<MediaMetadataCompat> = mutableListOf()
@@ -247,8 +246,20 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             return theStream
         }
 
+        fun queue(mediaId : String): MutableList<MediaSessionCompat.QueueItem>{
+            val streamies : MutableList<MediaSessionCompat.QueueItem> = mutableListOf()
+            browseTree[mediaId]!!.map { streamie ->
+                val theStremie = MediaSessionCompat.QueueItem(streamie.description, streamie.id.toLong())
+                streamies.add(theStremie)
+            }
+            return streamies
+        }
+
+
+
         override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
             val playlist = playlist(browseTree[mediaId])
+            mediaSession.setQueue(queue(mediaId!!))
             exoPlayer.prepare(playlist)
         }
 
@@ -260,12 +271,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     var playerEventListener = object : Player.EventListener{
+
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
 
             when(playbackState){
                 Player.STATE_READY -> {
 
-
+                    // Todo:
+                    // Add current metadata to the session
                 }
                 Player.STATE_ENDED -> {
 
@@ -316,7 +329,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
 
-            metadata.let { this@MediaPlaybackService.metadata = it }
+            metadata?.let {
+                this@MediaPlaybackService.metadata = it
+            }
         }
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
@@ -331,18 +346,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             when(playback?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
                     startForeground(Commons.NOTIFICATION_ID, notification())
-
                     Log.e(Commons.TAG, "reach state-playing code block")
                 }
                 else -> {
                     Log.e(Commons.TAG, "reach state-other code block")
-                    if(inForeground){
-                        stopForeground(false)
-                        notificationManager.notify(Commons.NOTIFICATION_ID, notification())
-                        if(playback?.state == PlaybackStateCompat.STATE_NONE){
-                            stopSelf()
-                        }
-                    }
+                    stopForeground(false)
                 }
             }
         }
@@ -350,8 +358,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     fun notification(): Notification{
         return notificationBuilder.apply {
-            setContentText(metadata!!.artist)
-            setContentTitle(metadata!!.title)
+            setContentText(metadata.artist)
+            setContentTitle(metadata.title)
+
 
 
             Log.e(Commons.TAG, "ran notification creation")
@@ -359,6 +368,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // Todo:
             // Receive the bitmap for the metadata in the notification
 
+            /*
             if(playback.isPlaying){
                 addAction(R.drawable.exo_controls_pause, applicationContext.getString(R.string.pause), MediaButtonReceiver
                     .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PAUSE))
@@ -367,10 +377,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 addAction(R.drawable.exo_controls_play, applicationContext.getString(R.string.play), MediaButtonReceiver
                     .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PLAY))
             }
+            */
+
 
         }.build()
     }
 
-    var inForeground : Boolean = false
 }
 

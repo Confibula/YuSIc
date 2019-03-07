@@ -11,7 +11,7 @@ data class Stream(
         /**
          * Indicates [playbackRes] has changed.
          */
-        const val PLAYING_COLOR = R.color.colorAccent
+        const val PLAYING_COLOR = R.color.colorPrimaryDark
 
         val diffCallback = object : DiffUtil.ItemCallback<Stream>() {
             override fun areItemsTheSame(oldItem: Stream,
