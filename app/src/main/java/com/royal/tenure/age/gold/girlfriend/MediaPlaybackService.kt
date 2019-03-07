@@ -14,11 +14,13 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.text.TextUtils.replace
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat.stopForeground
 import androidx.core.graphics.get
+import androidx.core.view.OneShotPreDrawListener.add
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
@@ -86,24 +88,50 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     // Fetched data
     private var metadatas: MutableList<MediaMetadataCompat> = mutableListOf()
     var positions : MutableList<HashMap<String, Any>> = mutableListOf()
-    fun fetchPositions(){
+    fun fetch(){
 
-        db.collection("genres")
+        db.collection("stream")
             .get()
-            .addOnSuccessListener { datas ->
-                for (data in datas){
-                    val info  : Map<String, Any> = data.data
+
+            .addOnSuccessListener {datas ->
+                for(data in datas){
+                    val song: Map<String, Any> = data.data
+                    val bitmap = song["image"] as String
+                    val source = song["source"] as String
+                    val creator = song["creator"] as String
+                    val title = song["title"] as String
+                    val id = song["id"] as String
+                    val genre = song["genre"] as String
+
                     val position : HashMap<String, Any> = HashMap()
-                    position["genre"] = info["genre"] as String
+                    position["genre"] = genre
                     position["id"] = 1
-                    positions.add(position)
+
+                    val info : HashMap<String, Any>? = positions.find {
+                        it.containsValue(position["genre"])
+                    }
+                    if(info == null) positions.add(position)
+
+
+                    val metadata : MediaMetadataCompat =
+                        MediaMetadataCompat.Builder()
+                            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, source)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, bitmap)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, creator)
+                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
+                            .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
+                            .build()
+                    metadatas.add(metadata)
                 }
 
             }.continueWithTask{
                 db.collection("users")
                     .document(auth.currentUser!!.uid)
                     .collection("positions")
-                    .get().addOnSuccessListener { datas ->
+                    .get()
+
+                    .addOnSuccessListener { datas ->
                         for(data in datas) {
                             val info : Map<String, Any> = data.data
                             val position : HashMap<String, Any> = HashMap()
@@ -115,43 +143,19 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                             }?.apply {
                                 replace("id", position["id"]!!)
                             }
-
                         }
-            } }.continueWithTask {
-                db.collection("stream")
-                    .get()
-                    .addOnSuccessListener {datas ->
-                        for(data in datas){
-                            val song: Map<String, Any> = data.data
-                            val bitmap = song["image"] as String
-                            val source = song["source"] as String
-                            val creator = song["creator"] as String
-                            val title = song["title"] as String
-                            val id = song["id"] as String
-                            val genre = song["genre"] as String
-                            val metadata : MediaMetadataCompat =
-                                MediaMetadataCompat.Builder()
-                                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, source)
-                                    .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, bitmap)
-                                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, creator)
-                                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
-                                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
-                                    .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
-                                    .build()
-                            metadatas.add(metadata)
-                        }
-                    }.addOnFailureListener {exception ->
-                        Log.e(Commons.TAG, "failed to read from FireStore: %e", exception)
                     }
+
             }.continueWith {
                 browseTree.update(metadatas, positions)
                 notifyChildrenChanged(Commons.ROOT_ID)
             }
+
     }
 
     override fun onCreate() {
         super.onCreate()
-        fetchPositions()
+        fetch()
 
         // Todo:
         // ContentProvider for Sonos and for your apps latest metadata

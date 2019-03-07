@@ -7,9 +7,10 @@
     <TextView
             android:id="@+id/text_view_stream"
             android:layout_width="match_parent"
-            android:gravity="center_horizontal"
+            android:gravity="center"
+            android:textAlignment="center"
             android:textSize="13sp"
-            android:layout_marginTop="8dp"
+            android:textStyle="italic"
             android:textColor="@color/colorPrimary"
             android:layout_height="match_parent"
             android:maxLines="1"/>
