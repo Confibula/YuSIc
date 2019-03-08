@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.media.MediaMetadataRetriever
 import android.media.browse.MediaBrowser
+import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.*
 import android.support.v4.media.MediaBrowserCompat
@@ -15,6 +16,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.support.v4.media.session.PlaybackStateCompat.*
 import android.text.TextUtils.replace
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
@@ -22,6 +24,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat.stopForeground
 import androidx.core.graphics.get
 import androidx.core.view.OneShotPreDrawListener.add
+import androidx.core.view.accessibility.AccessibilityEventCompat.setAction
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
@@ -32,6 +35,7 @@ import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.offline.DownloadService.startForeground
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.gms.common.internal.service.Common
 import com.google.android.gms.flags.Singletons
 import com.google.firebase.firestore.FirebaseFirestore
 import java.io.BufferedInputStream
@@ -55,12 +59,32 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             setSmallIcon(R.drawable.exo_notification_small_icon)
             setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             setOnlyAlertOnce(true)
+            setAutoCancel(true)
+            setContentIntent(controller.sessionActivity)
 
             setStyle(androidx.media.app.NotificationCompat.MediaStyle()
                 .setMediaSession(mediaSession.sessionToken)
-                //.setShowActionsInCompactView(0)
             )
-            setContentIntent(controller.sessionActivity)
+
+            addAction(
+                NotificationCompat.Action(
+                    R.drawable.exo_controls_play,
+                    this@MediaPlaybackService.getString(R.string.play),
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        applicationContext, ACTION_PLAY
+                    )
+                )
+            )
+
+            addAction(
+                NotificationCompat.Action(
+                    R.drawable.exo_controls_pause,
+                    this@MediaPlaybackService.getString(R.string.pause),
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        applicationContext, ACTION_PAUSE
+                    )
+                )
+            )
 
             // Creating the channel
             val mChannel = NotificationChannel(
@@ -79,9 +103,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var dataFactory: DefaultDataSourceFactory
     private lateinit var notificationManager: NotificationManagerCompat
     private lateinit var receiver: MyReceiver
-    private var metadata: MediaMetadataCompat = MediaMetadataCompat.Builder().build()
     private var playback : PlaybackStateCompat = PlaybackStateCompat.Builder().build()
-
 
 
     // Fetched data
@@ -133,9 +155,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     .addOnSuccessListener { datas ->
                         for(data in datas) {
                             val info : Map<String, Any> = data.data
-                            val position : HashMap<String, Any> = HashMap()
-                            position["genre"] = info["genre"] as String
-                            position["id"] = info["id"] as Int
+                            val position : HashMap<String, Any?> = HashMap()
+                            position["genre"] = info["genre"]
+                            position["id"] = info["id"]
 
                             positions.find {
                                 it.containsValue(position["genre"])
@@ -144,8 +166,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                             }
                         }
                     }
+                    .addOnFailureListener{
+                        Log.e(Commons.TAG, "failed to read %e ", it)
+                    }
 
             }.continueWith {
+                Log.e(Commons.TAG, "ran updating")
                 browseTree.update(metadatas, positions)
                 notifyChildrenChanged(Commons.ROOT_ID)
             }
@@ -156,7 +182,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         super.onCreate()
         fetch()
 
-        // Todo:
+        // Todo: Sonos Project
         // ContentProvider for Sonos and for your apps latest metadata
 
         val sessionIntent = packageManager?.getLaunchIntentForPackage(packageName)
@@ -185,6 +211,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 Util.getUserAgent(this, Commons.APP))
 
             it.setPlayer(exoPlayer, playbackPreparer) }
+
+
     }
 
 
@@ -212,9 +240,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onSetShuffleMode(player: Player?, shuffleMode: Int) = Unit
 
         override fun getSupportedPlaybackActions(player: Player?): Long {
-            return  PlaybackStateCompat.ACTION_PLAY or
-                    PlaybackStateCompat.ACTION_PAUSE or
-                    PlaybackStateCompat.ACTION_SET_REPEAT_MODE
+            return  ACTION_PLAY or
+                    ACTION_PAUSE or
+                    ACTION_SET_REPEAT_MODE
         }
 
         override fun getCommands(): Array<String>? = null
@@ -247,6 +275,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
 
         fun queue(mediaId : String): MutableList<MediaSessionCompat.QueueItem>{
+
             val streamies : MutableList<MediaSessionCompat.QueueItem> = mutableListOf()
             browseTree[mediaId]!!.map { streamie ->
                 val theStremie = MediaSessionCompat.QueueItem(streamie.description, streamie.id.toLong())
@@ -261,6 +290,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             val playlist = playlist(browseTree[mediaId])
             mediaSession.setQueue(queue(mediaId!!))
             exoPlayer.prepare(playlist)
+
+
+
         }
 
         override fun onPrepareFromUri(uri: Uri?, extras: Bundle?) = Unit
@@ -277,12 +309,25 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             when(playbackState){
                 Player.STATE_READY -> {
 
-                    // Todo:
+                    Log.e(Commons.TAG, "reached state READY uuh")
+
+
+                    // Todo: setMetadata !
                     // Add current metadata to the session
                 }
                 Player.STATE_ENDED -> {
 
+                    Log.e(Commons.TAG, "STATE ENDED")
+
+                    val id = controller.queue.first().queueId
+                    if(!controller.queue.isEmpty()) controller.queue.removeAt(0)
+                    val nowPlaying = metadatas.find {
+                        it.id.toLong() == id
+                    }
+                    mediaSession.setMetadata(nowPlaying)
+
                 }
+
                 else -> return
             }
         }
@@ -328,10 +373,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
-
-            metadata?.let {
-                this@MediaPlaybackService.metadata = it
-            }
         }
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
@@ -350,7 +391,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 }
                 else -> {
                     Log.e(Commons.TAG, "reach state-other code block")
-                    stopForeground(false)
+
+                    if(playback?.state != PlaybackStateCompat.STATE_NONE){
+                        stopForeground(false)
+                        notificationManager.notify(Commons.NOTIFICATION_ID, notification())
+                    }
+                    else{
+                        stopForeground(true)
+                    }
                 }
             }
         }
@@ -358,26 +406,29 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     fun notification(): Notification{
         return notificationBuilder.apply {
-            setContentText(metadata.artist)
-            setContentTitle(metadata.title)
-
+            setContentText(controller.metadata?.artist)
+            setContentTitle(controller.metadata?.title)
 
 
             Log.e(Commons.TAG, "ran notification creation")
 
-            // Todo:
+            // Todo: bitmap for notification ?
             // Receive the bitmap for the metadata in the notification
 
-            /*
+            // Todo: Fucking notification mess . . .
             if(playback.isPlaying){
-                addAction(R.drawable.exo_controls_pause, applicationContext.getString(R.string.pause), MediaButtonReceiver
-                    .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PAUSE))
+                setStyle(androidx.media.app.NotificationCompat.MediaStyle()
+                    .setShowActionsInCompactView(1)
+                )
             }
+
             else if(playback.isPlayEnabled){
-                addAction(R.drawable.exo_controls_play, applicationContext.getString(R.string.play), MediaButtonReceiver
-                    .buildMediaButtonPendingIntent(this@MediaPlaybackService, PlaybackStateCompat.ACTION_PLAY))
+                setStyle(androidx.media.app.NotificationCompat.MediaStyle()
+                    .setShowActionsInCompactView(0)
+                )
             }
-            */
+
+
 
 
         }.build()

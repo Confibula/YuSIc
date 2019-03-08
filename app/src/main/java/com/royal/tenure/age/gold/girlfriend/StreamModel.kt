@@ -23,24 +23,14 @@ class StreamModel : ViewModel() {
     val streams: LiveData<List<Stream>> = _streams
 
     val playbackState = MutableLiveData<PlaybackStateCompat>()
-        .apply { postValue(
-            PlaybackStateCompat.Builder().build()
-        ) }
 
     val controller = MutableLiveData<MediaControllerCompat>()
-        .apply { postValue(
-            null
-        ) }
 
-    val nowPlaying = MutableLiveData<MediaMetadataCompat>()
-        .apply { postValue(
-            MediaMetadataCompat.Builder().build()
-        ) }
+    val nowPlaying = MutableLiveData<MediaMetadataCompat>().apply {
+        this.postValue(MediaMetadataCompat.Builder().build())
+    }
 
     val image = MutableLiveData<Bitmap>()
-        .apply { postValue(
-            null
-        ) }
 
     val playbutton_res = MutableLiveData<Int>()
         .apply { postValue(R.drawable.exo_controls_play) }
@@ -62,7 +52,7 @@ class StreamModel : ViewModel() {
     fun putMetadata(metadata: MediaMetadataCompat){
         nowPlaying.postValue(metadata)
 
-        // Todo:
+        // Todo: bitmap for the image!
         // Receive the bitmap for the metadata
     }
 

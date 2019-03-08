@@ -1,6 +1,7 @@
 package com.royal.tenure.age.gold.girlfriend
 
 import android.app.Application
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.service.voice.AlwaysOnHotwordDetector
@@ -16,7 +17,7 @@ import com.bumptech.glide.Glide.init
 import com.royal.tenure.age.gold.girlfriend.Stream.Companion.PLAYING_COLOR
 import java.util.zip.Inflater
 
-class StreamAdapter(val streamClickListener: (Stream) -> Unit) : ListAdapter<Stream, StreamViewHolder>(Stream.diffCallback) {
+class StreamAdapter(val streamClickListener: (Stream) -> Unit, val context: Context) : ListAdapter<Stream, StreamViewHolder>(Stream.diffCallback) {
     override fun onBindViewHolder(holder: StreamViewHolder, position: Int) {
         super.onBindViewHolder(holder, position, mutableListOf())
     }
@@ -35,20 +36,22 @@ class StreamAdapter(val streamClickListener: (Stream) -> Unit) : ListAdapter<Str
         holder.stream = stream
         holder.title.text = stream.mediaId
 
-        payloads.forEach{payload ->
+        payloads.forEach { payload ->
             when (payload) {
                 PLAYING_COLOR -> {
 
-                    // Todo:
+                    // Todo: COLOR CODING for the stream !
                     // Make the color change when playback changes
                     Log.e(Commons.TAG, "changed the color")
 
                     holder.title.setTextColor(
-                        ContextCompat.getColor(Application().baseContext, PLAYING_COLOR)
+                        ContextCompat.getColor(context, PLAYING_COLOR)
                     )
                 }
                 // If the payload wasn't understood, refresh the full item (to be safe).
-                else -> return
+                else -> {
+                    Log.e(Commons.TAG, "payload was not understood ?")
+                }
             }
         }
     }

@@ -51,10 +51,14 @@ class MainActivity : AppCompatActivity() {
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
-            metadata?.let {
-                this@MainActivity.metadata = it
-                viewModel.putMetadata(it)
+
+            if(metadata?.id != null){
+                metadata.let {
+                    this@MainActivity.metadata = it
+                    viewModel.putMetadata(it)
+                }
             }
+
         }
 
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
@@ -63,15 +67,18 @@ class MainActivity : AppCompatActivity() {
                 viewModel.putPlayback(it)
             }
 
-            // Todo:
+            // Todo: Position data
             // Position data is not updated!!!
-            val positionData = HashMap<String, Any?>()
-            metadata?.let {
-                positionData.also { data ->
-                    data["id"] = it.id
-                    data["genre"] = it.genre }
-                updateToFireStoreThePositionData(positionData)
-            }
+            val positionData = HashMap<String, Any>()
+
+                metadata?.let {
+                    positionData.also { data ->
+                        Log.e(Commons.TAG, "the metadata: " + it.genre)
+                        data["id"] = it.id as String
+                        data["genre"] = it.genre as String }
+                    updateToFireStoreThePositionData(positionData)
+                }
+
 
             super.onPlaybackStateChanged(playback)
         }
@@ -84,7 +91,8 @@ class MainActivity : AppCompatActivity() {
             mediaBrowser.sessionToken.also { token ->
                 val controller = MediaControllerCompat(
                     this@MainActivity, token)
-                MediaControllerCompat.setMediaController(this@MainActivity, controller) }
+                MediaControllerCompat.setMediaController(this@MainActivity, controller)
+            }
 
             val controller = MediaControllerCompat
                 .getMediaController(this@MainActivity)
@@ -117,17 +125,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         val id = item?.itemId
-        val controller = MediaControllerCompat.getMediaController(this)
+        val controller = viewModel.controller.value
 
         Log.e(Commons.TAG, "ran onOptionsItemSelected")
         when(id){
             R.id.play_button -> {
                 if(playback.isPlaying) {
-                    controller.transportControls.pause()
+                    controller?.transportControls!!.pause()
                     item.icon = getDrawable(R.drawable.exo_controls_play)
                 }
                 else if(playback.isPlayEnabled) {
-                    controller.transportControls.play()
+                    controller?.transportControls!!.play()
                     item.icon = getDrawable(R.drawable.exo_controls_pause)
                 }
             }
@@ -144,12 +152,12 @@ class MainActivity : AppCompatActivity() {
         viewModel = ViewModelProviders.of(this).get(StreamModel::class.java)
         setSupportActionBar(findViewById(R.id.toolbar_view))
 
-        viewModel.nowPlaying.observe(this@MainActivity, Observer { metadata ->
+        viewModel.nowPlaying.observeForever{ metadata ->
             supportActionBar!!.apply {
                 title = metadata.title
                 subtitle = metadata.artist
             }
-        })
+        }
 
         // Todo: Will this really work?
         findViewById<ImageView>(R.id.image_view).apply {
@@ -164,7 +172,7 @@ class MainActivity : AppCompatActivity() {
             null)
 
         findViewById<RecyclerView>(R.id.recycler_view).apply {
-            adapter = StreamAdapter{ stream -> viewModel.play(stream) }.also {adapter ->
+            adapter = StreamAdapter({ stream -> viewModel.play(stream) }, this@MainActivity).also {adapter ->
                 viewModel.streams.observe(this@MainActivity, Observer { list ->
                     adapter.submitList(list)
                 })
@@ -183,11 +191,16 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    fun updateToFireStoreThePositionData(positionData: HashMap<String, Any?>){
+    fun updateToFireStoreThePositionData(positionData: HashMap<String, Any>){
+        val info = HashMap<String, Any>()
+        info["id"] = positionData["id"]!!
+        info["genre"] = positionData["genre"]!!
+
         db.collection("users")
             .document(auth.currentUser!!.uid)
             .collection("positions")
-            .add(positionData)
+            .document(positionData["genre"] as String)
+            .set(info)
             .addOnFailureListener{
                 Log.e(Commons.TAG, "failed to write position data: %e", it)
             }}
