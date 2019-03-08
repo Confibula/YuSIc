@@ -3,12 +3,9 @@
       xmlns:app="http://schemas.android.com/apk/res-auto"
       xmlns:tools="http://schemas.android.com/tools"
       tools:context=".MainActivity">
-
     <item
             android:id="@+id/play_button"
             android:title="@string/play_pause"
-            android:icon="@drawable/exo_controls_play"
-            app:showAsAction="ifRoom" />
-
+            android:icon="@drawable/exo_controls_play"/>
 
 </menu>

@@ -4,6 +4,10 @@ apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 
 android {
+    lintOptions {
+        disable 'RestrictedApi'
+    }
+
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.royal.tenure.age.gold.girlfriend"

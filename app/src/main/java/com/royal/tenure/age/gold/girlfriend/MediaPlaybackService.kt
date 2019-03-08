@@ -6,6 +6,7 @@ import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
+import android.media.MediaMetadata
 import android.media.MediaMetadataRetriever
 import android.media.browse.MediaBrowser
 import android.media.session.PlaybackState
@@ -64,26 +65,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             setStyle(androidx.media.app.NotificationCompat.MediaStyle()
                 .setMediaSession(mediaSession.sessionToken)
-            )
-
-            addAction(
-                NotificationCompat.Action(
-                    R.drawable.exo_controls_play,
-                    this@MediaPlaybackService.getString(R.string.play),
-                    MediaButtonReceiver.buildMediaButtonPendingIntent(
-                        applicationContext, ACTION_PLAY
-                    )
-                )
-            )
-
-            addAction(
-                NotificationCompat.Action(
-                    R.drawable.exo_controls_pause,
-                    this@MediaPlaybackService.getString(R.string.pause),
-                    MediaButtonReceiver.buildMediaButtonPendingIntent(
-                        applicationContext, ACTION_PAUSE
-                    )
-                )
+                .setShowActionsInCompactView(0)
             )
 
             // Creating the channel
@@ -103,8 +85,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var dataFactory: DefaultDataSourceFactory
     private lateinit var notificationManager: NotificationManagerCompat
     private lateinit var receiver: MyReceiver
-    private var playback : PlaybackStateCompat = PlaybackStateCompat.Builder().build()
-
+    private var playback: PlaybackStateCompat = PlaybackStateCompat.Builder().build()
+    private var metadata: MediaMetadataCompat = MediaMetadataCompat.Builder().build()
 
     // Fetched data
     private var metadatas: MutableList<MediaMetadataCompat> = mutableListOf()
@@ -269,67 +251,66 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             streamies?.forEach {song ->
                 val videoSource = ExtractorMediaSource.Factory(dataFactory)
                     .createMediaSource(Uri.parse(song.mediaUri))
-                theStream = ConcatenatingMediaSource(theStream, videoSource)
-            }
+                theStream = ConcatenatingMediaSource(theStream, videoSource) }
             return theStream
         }
 
         fun queue(mediaId : String): MutableList<MediaSessionCompat.QueueItem>{
-
             val streamies : MutableList<MediaSessionCompat.QueueItem> = mutableListOf()
             browseTree[mediaId]!!.map { streamie ->
                 val theStremie = MediaSessionCompat.QueueItem(streamie.description, streamie.id.toLong())
                 streamies.add(theStremie)
             }
-            return streamies
+            return streamies.apply {
+                sortBy {
+                    it.queueId } }
         }
-
-
 
         override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
             val playlist = playlist(browseTree[mediaId])
-            mediaSession.setQueue(queue(mediaId!!))
             exoPlayer.prepare(playlist)
-
-
-
+            mediaSession.setQueue(queue(mediaId!!))
+            setMetadata()
         }
 
         override fun onPrepareFromUri(uri: Uri?, extras: Bundle?) = Unit
 
         override fun onPrepare() {
-
         }
     }
 
+    fun setMetadata(){
+        val id = controller.queue.first().queueId
+        val nowPlaying = metadatas.find {
+            it.id.toLong() == id }
+        mediaSession.setMetadata(nowPlaying)
+
+        var queue = mutableListOf<MediaSessionCompat.QueueItem>()
+        val list = controller.queue
+        if(!list.isEmpty()) {
+            list.removeAt(0)
+            queue = list }
+        if(!queue.isEmpty()) mediaSession.setQueue(queue)
+    }
+
     var playerEventListener = object : Player.EventListener{
-
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-
             when(playbackState){
                 Player.STATE_READY -> {
-
                     Log.e(Commons.TAG, "reached state READY uuh")
-
 
                     // Todo: setMetadata !
                     // Add current metadata to the session
                 }
                 Player.STATE_ENDED -> {
-
                     Log.e(Commons.TAG, "STATE ENDED")
-
-                    val id = controller.queue.first().queueId
-                    if(!controller.queue.isEmpty()) controller.queue.removeAt(0)
-                    val nowPlaying = metadatas.find {
-                        it.id.toLong() == id
-                    }
-                    mediaSession.setMetadata(nowPlaying)
-
                 }
-
                 else -> return
             }
+        }
+        override fun onPositionDiscontinuity(reason: Int) {
+            Log.e(Commons.TAG, "song changed because of DISCONTINUITY")
+            setMetadata()
         }
     }
 
@@ -373,6 +354,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
+
+            metadata?.id?.let {
+                this@MediaPlaybackService.metadata = metadata
+                notificationManager.notify(Commons.NOTIFICATION_ID, notification())
+            }
+
         }
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
@@ -386,29 +373,20 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             when(playback?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
-                    startForeground(Commons.NOTIFICATION_ID, notification())
-                    Log.e(Commons.TAG, "reach state-playing code block")
-                }
+                    startForeground(Commons.NOTIFICATION_ID, notification()) }
                 else -> {
-                    Log.e(Commons.TAG, "reach state-other code block")
-
                     if(playback?.state != PlaybackStateCompat.STATE_NONE){
                         stopForeground(false)
-                        notificationManager.notify(Commons.NOTIFICATION_ID, notification())
-                    }
-                    else{
-                        stopForeground(true)
-                    }
-                }
-            }
+                        notificationManager.notify(Commons.NOTIFICATION_ID, notification()) }
+                    else{ stopForeground(true) }
+                } }
         }
     }
 
     fun notification(): Notification{
         return notificationBuilder.apply {
-            setContentText(controller.metadata?.artist)
-            setContentTitle(controller.metadata?.title)
-
+            setContentText(metadata.title)
+            setContentTitle(metadata.artist)
 
             Log.e(Commons.TAG, "ran notification creation")
 
@@ -416,23 +394,22 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // Receive the bitmap for the metadata in the notification
 
             // Todo: Fucking notification mess . . .
+            mActions.clear()
             if(playback.isPlaying){
-                setStyle(androidx.media.app.NotificationCompat.MediaStyle()
-                    .setShowActionsInCompactView(1)
-                )
-            }
+                addAction(NotificationCompat.Action(
+                    R.drawable.exo_controls_pause,
+                    this@MediaPlaybackService.getString(R.string.pause),
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        applicationContext, ACTION_PAUSE))) }
 
             else if(playback.isPlayEnabled){
-                setStyle(androidx.media.app.NotificationCompat.MediaStyle()
-                    .setShowActionsInCompactView(0)
-                )
-            }
+                addAction(NotificationCompat.Action(
+                    R.drawable.exo_controls_play,
+                    this@MediaPlaybackService.getString(R.string.play),
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        applicationContext, ACTION_PLAY))) }
 
-
-
-
-        }.build()
-    }
+        }.build() }
 
 }
 

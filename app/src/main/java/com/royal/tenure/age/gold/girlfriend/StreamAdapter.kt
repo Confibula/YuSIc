@@ -44,9 +44,7 @@ class StreamAdapter(val streamClickListener: (Stream) -> Unit, val context: Cont
                     // Make the color change when playback changes
                     Log.e(Commons.TAG, "changed the color")
 
-                    holder.title.setTextColor(
-                        ContextCompat.getColor(context, PLAYING_COLOR)
-                    )
+                    holder.title.setTextColor(ContextCompat.getColor(context, PLAYING_COLOR))
                 }
                 // If the payload wasn't understood, refresh the full item (to be safe).
                 else -> {

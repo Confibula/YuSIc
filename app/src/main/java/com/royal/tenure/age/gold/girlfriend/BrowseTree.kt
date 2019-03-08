@@ -4,24 +4,38 @@ import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
 import android.util.Log
 
-class BrowseTree() {
+class BrowseTree {
 
     // This is the ingenious code
     private val children = mutableMapOf<String, MutableList<MediaMetadataCompat>>()
-    operator fun get(node: String?) = children[node]
+    operator fun get(node: String?) = children[node]?.apply {
+        sortBy {
+            it.id
+        }
+    }
 
 
     fun update(metadatas: MutableList<MediaMetadataCompat>, positions : MutableList<HashMap<String, Any>>){
         Log.e(Commons.TAG, "I HAVE REACHED UPDATE metadatas" + positions)
         Log.e(Commons.TAG, "I HAVE REACHED UPDATE metadatas" + metadatas.toList())
 
+        // Todo: do something with incoming position data
+
         metadatas.forEach { song ->
             val genre = song.genre
             val streamies : MutableList<MediaMetadataCompat>
                     = children[genre] ?: buildStreamies(song)
 
-            streamies.add(song)
+            Log.e(Commons.TAG, "ran foreach" + song.description.title)
+            val position = positions.find {
+                it.containsValue(genre) }
+            if(genre == position!!["genre"]
+                && streamies.size < 55
+                && song.id >= position["id"] as String){
+                streamies.add(song) }
+
         }
+
     }
     fun buildStreamies(metadata: MediaMetadataCompat) : MutableList<MediaMetadataCompat>{
         Log.e(Commons.TAG, "built a stream")

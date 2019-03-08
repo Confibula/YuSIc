@@ -19,6 +19,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.view.*
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
@@ -52,12 +53,10 @@ class MainActivity : AppCompatActivity() {
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
 
-            if(metadata?.id != null){
-                metadata.let {
-                    this@MainActivity.metadata = it
-                    viewModel.putMetadata(it)
+            metadata?.id?.let {
+                this@MainActivity.metadata = metadata
+                    viewModel.putMetadata(metadata)
                 }
-            }
 
         }
 
@@ -116,7 +115,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         MenuInflater(this).inflate(R.menu.menu_main, menu).also {
-            menu!!.findItem(R.id.play_button).icon = getDrawable(viewModel.playbutton_res.value!!)
+            val playButt = menu!!.findItem(R.id.play_button)
+            playButt.icon = getDrawable(viewModel.playbutton_res.value!!)
+            playButt.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
         }
         // Probably tells it to create. False means 'not create'
 
@@ -124,11 +125,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-        val id = item?.itemId
         val controller = viewModel.controller.value
-
-        Log.e(Commons.TAG, "ran onOptionsItemSelected")
-        when(id){
+        when(item?.itemId){
             R.id.play_button -> {
                 if(playback.isPlaying) {
                     controller?.transportControls!!.pause()
@@ -154,8 +152,8 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.nowPlaying.observeForever{ metadata ->
             supportActionBar!!.apply {
-                title = metadata.title
-                subtitle = metadata.artist
+                title = metadata.artist
+                subtitle = metadata.title
             }
         }
 

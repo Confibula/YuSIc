@@ -7,6 +7,7 @@
     <dist:module
             dist:instant="true"/>
     <application android:allowBackup="true"
+                 android:fullBackupContent="false"
                  android:label="@string/app_name"
                  android:icon="@mipmap/yusic"
                  android:roundIcon="@mipmap/yusic"
@@ -14,17 +15,13 @@
                  android:theme="@style/AppTheme">
         <activity android:name=".MainActivity"
                   android:launchMode="singleTask">
-
             <intent-filter android:order="1">
                 <action android:name="android.intent.action.VIEW"/>
-
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <category android:name="android.intent.category.DEFAULT"/>
-
-                <data
-                        android:host="nano.ledger.rollover.trademark.com"
-                        android:pathPattern="/.*"
-                        android:scheme="https"/>
+                <data android:host="nano.ledger.rollover.trademark.com"
+                      android:pathPattern="/.*"
+                      android:scheme="https"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -33,7 +30,8 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".MediaPlaybackService">
+        <service android:name=".MediaPlaybackService"
+                 android:exported="false">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
