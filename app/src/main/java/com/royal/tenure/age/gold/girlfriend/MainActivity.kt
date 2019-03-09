@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: StreamModel
     private var playback: PlaybackStateCompat = PlaybackStateCompat.Builder().build()
     private var metadata : MediaMetadataCompat? = null
+    
 
     val controllerCallback = object : MediaControllerCompat.Callback(){
 
