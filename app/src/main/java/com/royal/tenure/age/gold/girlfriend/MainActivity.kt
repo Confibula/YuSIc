@@ -47,17 +47,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: StreamModel
     private var playback: PlaybackStateCompat = PlaybackStateCompat.Builder().build()
     private var metadata : MediaMetadataCompat? = null
-    
+
 
     val controllerCallback = object : MediaControllerCompat.Callback(){
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
 
-            metadata?.id?.also {
+            metadata?.id?.let {
                 this@MainActivity.metadata = metadata
                     viewModel.putMetadata(metadata)
-
+                    Log.e(Commons.TAG, "metadata sent to the viewmodel: " + metadata.title)
                 }
         }
 
@@ -151,10 +151,12 @@ class MainActivity : AppCompatActivity() {
         viewModel = ViewModelProviders.of(this).get(StreamModel::class.java)
         setSupportActionBar(findViewById(R.id.toolbar_view))
 
-        viewModel.nowPlaying.observeForever{ metadata ->
+        viewModel.nowPlaying.observeForever{ data ->
             supportActionBar!!.apply {
-                title = metadata.artist
-                subtitle = metadata.title
+                title = data.artist
+                subtitle = data.title
+
+                Log.e(Commons.TAG, "writes titles to the toolbar: " + data.title)
             }
         }
 

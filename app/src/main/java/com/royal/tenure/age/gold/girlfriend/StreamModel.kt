@@ -18,6 +18,7 @@ import com.bumptech.glide.Glide.init
 import com.google.android.gms.common.internal.service.Common
 
 class StreamModel : ViewModel() {
+
     private val _streams = MutableLiveData<List<Stream>>()
         .apply { postValue(emptyList()) }
 
@@ -27,14 +28,19 @@ class StreamModel : ViewModel() {
 
     val controller = MutableLiveData<MediaControllerCompat>()
 
-    val nowPlaying = MutableLiveData<MediaMetadataCompat>().apply {
+    private val _nowPlaying = MutableLiveData<MediaMetadataCompat>().apply {
         this.postValue(MediaMetadataCompat.Builder().build())
     }
+
+    val nowPlaying : LiveData<MediaMetadataCompat> = _nowPlaying
 
     val image = MutableLiveData<Bitmap>()
 
     val playbutton_res = MutableLiveData<Int>()
         .apply { postValue(R.drawable.exo_controls_play) }
+
+
+
 
     fun putStreams(streams: MutableList<MediaBrowserCompat.MediaItem>){
         val list = streams.map { stream ->
@@ -51,7 +57,7 @@ class StreamModel : ViewModel() {
     }
 
     fun putMetadata(metadata: MediaMetadataCompat){
-        nowPlaying.postValue(metadata)
+        _nowPlaying.postValue(metadata)
 
         // Todo: bitmap for the image!
         // Receive the bitmap for the metadata
