@@ -8,11 +8,7 @@ class BrowseTree {
 
     // This is the ingenious code
     private val children = mutableMapOf<String, MutableList<MediaMetadataCompat>>()
-    operator fun get(node: String?) = children[node]?.apply {
-        sortBy {
-            it.id
-        }
-    }
+    operator fun get(node: String?) = children[node]
 
 
     fun update(metadatas: MutableList<MediaMetadataCompat>, positions : MutableList<HashMap<String, Any>>){
@@ -22,24 +18,23 @@ class BrowseTree {
         // Todo: do something with incoming position data
 
         metadatas.forEach { song ->
-            val genre = song.genre
+            val genre : String = song.genre
             val streamies : MutableList<MediaMetadataCompat>
                     = children[genre] ?: buildStreamies(song)
 
-            Log.e(Commons.TAG, "ran foreach" + song.description.title)
+            Log.e(Commons.TAG, song.description.title.toString())
             val position = positions.find {
                 it.containsValue(genre) }
-            if(genre == position!!["genre"]
-                && streamies.size < 55
-                && song.id >= position["id"] as String){
+            val id = position!!["id"] as Number
+            val theGenre = position!!["genre"]
+            if(streamies.size < 55 && song.id.toLong() >= id.toLong() && genre == theGenre){
                 streamies.add(song) }
 
-        }
+            // Todo: Most important fix. Return player to the right place in the stream!
 
+        }
     }
     fun buildStreamies(metadata: MediaMetadataCompat) : MutableList<MediaMetadataCompat>{
-        Log.e(Commons.TAG, "built a stream")
-
         val genre = metadata.genre
         val stream = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, genre)

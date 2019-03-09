@@ -1,5 +1,6 @@
 package com.royal.tenure.age.gold.girlfriend
 
+import android.app.Activity
 import android.content.Context
 import android.drm.DrmStore
 import android.graphics.Bitmap

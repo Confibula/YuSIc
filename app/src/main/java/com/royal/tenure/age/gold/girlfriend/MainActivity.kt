@@ -53,11 +53,11 @@ class MainActivity : AppCompatActivity() {
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
 
-            metadata?.id?.let {
+            metadata?.id?.also {
                 this@MainActivity.metadata = metadata
                     viewModel.putMetadata(metadata)
-                }
 
+                }
         }
 
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
                 metadata?.let {
                     positionData.also { data ->
                         Log.e(Commons.TAG, "the metadata: " + it.genre)
-                        data["id"] = it.id as String
+                        data["id"] = it.id.toDouble()
                         data["genre"] = it.genre as String }
                     updateToFireStoreThePositionData(positionData)
                 }
@@ -191,7 +191,7 @@ class MainActivity : AppCompatActivity() {
 
     fun updateToFireStoreThePositionData(positionData: HashMap<String, Any>){
         val info = HashMap<String, Any>()
-        info["id"] = positionData["id"]!!
+        info["id"] = positionData["id"] as Number
         info["genre"] = positionData["genre"]!!
 
         db.collection("users")
@@ -211,7 +211,6 @@ class MainActivity : AppCompatActivity() {
         Log.e(Commons.TAG, "current user email: " + auth.currentUser?.email)
         if(auth.currentUser == null)  startSignInProcess()
         else if(!mediaBrowser.isConnected) {
-            startService(Intent(this, MediaPlaybackService::class.java))
             mediaBrowser.connect()
         }
 
@@ -248,7 +247,6 @@ class MainActivity : AppCompatActivity() {
 
         auth.signInWithCredential(credential).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                startService(Intent(this, MediaPlaybackService::class.java))
                 mediaBrowser.connect()
             }
         }

@@ -35,6 +35,9 @@ val MediaMetadataCompat.genre
 val MediaMetadataCompat.mediaUri
     get() = getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI)
 
+val MediaMetadataCompat.artUri
+    get() = getString(MediaMetadataCompat.METADATA_KEY_ART_URI)
+
 val MediaMetadataCompat.artist
     get() = getString(MediaMetadataCompat.METADATA_KEY_ARTIST)
 

@@ -89,8 +89,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private var metadata: MediaMetadataCompat = MediaMetadataCompat.Builder().build()
 
     // Fetched data
-    private var metadatas: MutableList<MediaMetadataCompat> = mutableListOf()
-    var positions : MutableList<HashMap<String, Any>> = mutableListOf()
+    private val metadatas: MutableList<MediaMetadataCompat> = mutableListOf()
+    private val positions : MutableList<HashMap<String, Any>> = mutableListOf()
     fun fetch(){
 
         db.collection("stream")
@@ -138,8 +138,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                         for(data in datas) {
                             val info : Map<String, Any> = data.data
                             val position : HashMap<String, Any?> = HashMap()
-                            position["genre"] = info["genre"]
-                            position["id"] = info["id"]
+                            position["genre"] = info["genre"] as String
+                            position["id"] = info["id"] as Number
 
                             positions.find {
                                 it.containsValue(position["genre"])
@@ -248,7 +248,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         fun playlist(streamies: MutableList<MediaMetadataCompat>?) : ConcatenatingMediaSource{
             var theStream = ConcatenatingMediaSource()
-            streamies?.forEach {song ->
+            streamies?.apply { sortBy { it.id.toLong() } }?.map {song ->
+                Log.e(Commons.TAG, "foreach ran like this: " + song.title)
                 val videoSource = ExtractorMediaSource.Factory(dataFactory)
                     .createMediaSource(Uri.parse(song.mediaUri))
                 theStream = ConcatenatingMediaSource(theStream, videoSource) }
@@ -284,6 +285,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         val nowPlaying = metadatas.find {
             it.id.toLong() == id }
         mediaSession.setMetadata(nowPlaying)
+        metadata = nowPlaying!!
 
         var queue = mutableListOf<MediaSessionCompat.QueueItem>()
         val list = controller.queue
@@ -291,6 +293,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             list.removeAt(0)
             queue = list }
         if(!queue.isEmpty()) mediaSession.setQueue(queue)
+
+        //Log.e(Commons.TAG, "logged: " + queue.first().description.title)
     }
 
     var playerEventListener = object : Player.EventListener{
@@ -299,6 +303,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 Player.STATE_READY -> {
                     Log.e(Commons.TAG, "reached state READY uuh")
 
+                    mediaSession.setMetadata(metadata)
                     // Todo: setMetadata !
                     // Add current metadata to the session
                 }
@@ -373,13 +378,18 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             when(playback?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
-                    startForeground(Commons.NOTIFICATION_ID, notification()) }
+                    startForeground(Commons.NOTIFICATION_ID, notification())
+                    startService(Intent(this@MediaPlaybackService, MediaPlaybackService::class.java))}
                 else -> {
-                    if(playback?.state != PlaybackStateCompat.STATE_NONE){
+                    if(playback?.state == PlaybackStateCompat.STATE_PAUSED){
                         stopForeground(false)
-                        notificationManager.notify(Commons.NOTIFICATION_ID, notification()) }
-                    else{ stopForeground(true) }
-                } }
+                        notificationManager.notify(Commons.NOTIFICATION_ID, notification())}
+                    else if (playback?.state == PlaybackStateCompat.STATE_NONE){
+                        stopForeground(true)
+                        stopSelf()
+                    }
+                }
+            }
         }
     }
 
