@@ -15,11 +15,19 @@
       },
       "oauth_client": [
         {
-          "client_id": "639083721163-af4g6566435lbt3498mk8l83op0go02i.apps.googleusercontent.com",
+          "client_id": "639083721163-mcrrgi62p1a668r2chla4j0c0p2qpt5g.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.royal.tenure.age.gold.girlfriend",
-            "certificate_hash": "5b808dbe6ba4f3bb05a9b2faf9304d1b5850e0ee"
+            "certificate_hash": "1d4ac5d343474d36a2b013e9485ea99899411ebb"
+          }
+        },
+        {
+          "client_id": "639083721163-v6qhl39ikgupilorujnitoifqpj4b80o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.royal.tenure.age.gold.girlfriend",
+            "certificate_hash": "df691e712aa161ef1ce5f249862f665c3df70fa7"
           }
         },
         {

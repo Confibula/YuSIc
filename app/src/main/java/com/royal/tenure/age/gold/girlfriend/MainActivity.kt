@@ -67,8 +67,6 @@ class MainActivity : AppCompatActivity() {
                 viewModel.putPlayback(it)
             }
 
-            // Todo: Position data
-            // Position data is not updated!!!
             val positionData = HashMap<String, Any>()
 
                 metadata?.let {
@@ -98,6 +96,7 @@ class MainActivity : AppCompatActivity() {
                 .getMediaController(this@MainActivity)
 
             viewModel.putController(controller)
+            viewModel.putMetadata(controller.metadata)
 
             controller.registerCallback(controllerCallback)
 
@@ -151,16 +150,16 @@ class MainActivity : AppCompatActivity() {
         viewModel = ViewModelProviders.of(this).get(StreamModel::class.java)
         setSupportActionBar(findViewById(R.id.toolbar_view))
 
-        viewModel.nowPlaying.observeForever{ data ->
-            supportActionBar!!.apply {
-                title = data.artist
-                subtitle = data.title
-
-                Log.e(Commons.TAG, "writes titles to the toolbar: " + data.title)
-            }
+        supportActionBar!!.also {actionBar ->
+            viewModel.nowPlaying.observe(this@MainActivity, Observer<MediaMetadataCompat>{ data ->
+                actionBar.apply {
+                    title = data.artist
+                    subtitle = data.title
+                    Log.e(Commons.TAG, "writes titles to the toolbar: " + data.title)
+                }
+            })
         }
 
-        // Todo: Will this really work?
         findViewById<ImageView>(R.id.image_view).apply {
             viewModel.image.observe(this@MainActivity, Observer { image ->
                 this.setImageBitmap(image)
@@ -176,6 +175,8 @@ class MainActivity : AppCompatActivity() {
             adapter = StreamAdapter({ stream -> viewModel.play(stream) }, this@MainActivity).also {adapter ->
                 viewModel.streams.observe(this@MainActivity, Observer { list ->
                     adapter.submitList(list)
+
+                    Log.e(Commons.TAG, "submitted the list to the adapter ")
                 })
             }
             layoutManager = LinearLayoutManager(

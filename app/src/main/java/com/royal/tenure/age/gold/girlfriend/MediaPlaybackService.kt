@@ -32,6 +32,7 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
 import com.google.android.exoplayer2.util.Log
 import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.audio.AudioAttributes
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.offline.DownloadService.startForeground
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
@@ -53,7 +54,15 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private var browseTree: BrowseTree = BrowseTree()
 
     private val exoPlayer : ExoPlayer by lazy {
-        ExoPlayerFactory.newSimpleInstance(this) }
+        ExoPlayerFactory.newSimpleInstance(this).apply {
+            setAudioAttributes(uAmpAudioAttributes, true)
+        }
+    }
+
+    private val uAmpAudioAttributes = AudioAttributes.Builder()
+        .setContentType(C.CONTENT_TYPE_MUSIC)
+        .setUsage(C.USAGE_MEDIA)
+        .build()
 
     private val notificationBuilder : NotificationCompat.Builder by lazy {
         NotificationCompat.Builder(this, Commons.APP).apply {
@@ -302,10 +311,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             when(playbackState){
                 Player.STATE_READY -> {
                     Log.e(Commons.TAG, "reached state READY uuh")
-
-                    mediaSession.setMetadata(metadata)
-                    // Todo: setMetadata !
-                    // Add current metadata to the session
                 }
                 Player.STATE_ENDED -> {
                     Log.e(Commons.TAG, "STATE ENDED")
@@ -370,6 +375,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(playback)
 
+            mediaSession.setMetadata(metadata)
             Log.e(Commons.TAG, "playbackstate: " + playback?.state)
 
             playback?.let {
@@ -403,7 +409,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // Todo: bitmap for notification ?
             // Receive the bitmap for the metadata in the notification
 
-            // Todo: Fucking notification mess . . .
             mActions.clear()
             if(playback.isPlaying){
                 addAction(NotificationCompat.Action(

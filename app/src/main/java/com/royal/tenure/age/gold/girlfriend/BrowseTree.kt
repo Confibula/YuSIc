@@ -15,8 +15,6 @@ class BrowseTree {
         Log.e(Commons.TAG, "I HAVE REACHED UPDATE metadatas" + positions)
         Log.e(Commons.TAG, "I HAVE REACHED UPDATE metadatas" + metadatas.toList())
 
-        // Todo: do something with incoming position data
-
         metadatas.forEach { song ->
             val genre : String = song.genre
             val streamies : MutableList<MediaMetadataCompat>
@@ -29,8 +27,6 @@ class BrowseTree {
             val theGenre = position!!["genre"]
             if(streamies.size < 55 && song.id.toLong() >= id.toLong() && genre == theGenre){
                 streamies.add(song) }
-
-            // Todo: Most important fix. Return player to the right place in the stream!
 
         }
     }
