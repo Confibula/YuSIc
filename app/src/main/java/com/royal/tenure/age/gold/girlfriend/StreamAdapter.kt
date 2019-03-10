@@ -37,6 +37,8 @@ class StreamAdapter(val streamClickListener: (Stream) -> Unit, val context: Cont
         holder.title.text = stream.mediaId.toUpperCase()
         holder.title.setTextColor(ContextCompat.getColor(context, stream.color))
 
+        Log.e(Commons.TAG, "ran onBindViewHolder: " + stream.mediaId)
+
         payloads.forEach { payload ->
             when (payload) {
                 PLAYING_COLOR -> {
@@ -61,16 +63,11 @@ class StreamViewHolder(view: View, streamClickListener: (Stream) -> Unit, contex
 
     val title: TextView = view.findViewById(R.id.text_view_stream)
     var stream : Stream? = null
-    var color = stream?.color
 
     init {
         view.setOnClickListener {
             stream?.let {
                 streamClickListener(it)
-                if(it.color == R.color.colorPrimary) color = PLAYING_COLOR
-                else if(it.color == PLAYING_COLOR) color = R.color.colorPrimary
-                title.setTextColor(ContextCompat.getColor(context, color!!))
-                it.color = color!!
             }
         }
     }

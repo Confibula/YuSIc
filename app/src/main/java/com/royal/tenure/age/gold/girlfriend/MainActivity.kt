@@ -111,11 +111,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        MenuInflater(this).inflate(R.menu.menu_main, menu).also {
-            val playButt = menu!!.findItem(R.id.play_button)
-            playButt.icon = getDrawable(viewModel.playbutton_res.value!!)
-            playButt.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        }
+        MenuInflater(this).inflate(R.menu.menu_main, menu)
+        val playButt = menu!!.findItem(R.id.play_button)
+        viewModel.playbutton_res.observe(this, Observer { res ->
+            playButt.icon = getDrawable(res)
+        })
+        Log.e(Commons.TAG, "button was: " + viewModel.playbutton_res.value!!)
+        playButt.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+
         // Probably tells it to create. False means 'not create'
 
         return true

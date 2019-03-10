@@ -34,7 +34,7 @@ class StreamModel : ViewModel() {
     val nowPlaying : LiveData<MediaMetadataCompat> = _nowPlaying
 
     val playbutton_res = MutableLiveData<Int>()
-        .apply { postValue(R.drawable.exo_controls_play) }
+        .apply { postValue(R.drawable.exo_notification_play) }
 
     fun putStreams(streams: MutableList<MediaBrowserCompat.MediaItem>){
         val list = streams.map { stream ->
@@ -62,8 +62,8 @@ class StreamModel : ViewModel() {
     fun putPlayback(playback: PlaybackStateCompat){
         playbackState.postValue(playback)
 
-        if(playback.isPlaying) playbutton_res.postValue(R.drawable.exo_controls_pause)
-        else if(playback.isPlayEnabled) playbutton_res.postValue(R.drawable.exo_controls_play)
+        if(playback.isPlaying) playbutton_res.postValue(R.drawable.exo_notification_pause)
+        else if(playback.isPlayEnabled) playbutton_res.postValue(R.drawable.exo_notification_play)
     }
 
     fun getStreamColor(stream: String) : Int {
@@ -80,6 +80,7 @@ class StreamModel : ViewModel() {
     }
 
     fun play(stream: Stream){
+
         if (stream.mediaId == nowPlaying.value!!.genre) {
             when {
                 playbackState.value!!.isPlaying -> {
@@ -100,6 +101,5 @@ class StreamModel : ViewModel() {
             Log.e(Commons.TAG, "played playback anew")
         }
     }
-
 }
 

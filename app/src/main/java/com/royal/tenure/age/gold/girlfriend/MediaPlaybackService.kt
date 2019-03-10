@@ -405,9 +405,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             Log.e(Commons.TAG, "ran notification creation")
 
-            // Todo: bitmap for notification ?
-            // Receive the bitmap for the metadata in the notification
-
             mActions.clear()
             if(playback.isPlaying){
                 addAction(NotificationCompat.Action(

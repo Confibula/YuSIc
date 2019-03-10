@@ -24,8 +24,6 @@
 
     <include layout="@layout/tool_bar"
              android:id="@+id/toolbar_view"
-             android:background="?attr/colorPrimary"
-             app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
              app:layout_constraintBottom_toBottomOf="parent"
              android:layout_width="match_parent"
              android:layout_height="wrap_content">
