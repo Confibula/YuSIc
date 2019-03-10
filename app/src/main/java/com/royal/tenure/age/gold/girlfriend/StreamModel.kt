@@ -21,29 +21,25 @@ class StreamModel : ViewModel() {
 
     private val _streams = MutableLiveData<List<Stream>>()
         .apply { postValue(emptyList()) }
-
     val streams: LiveData<List<Stream>> = _streams
 
-    val playbackState = MutableLiveData<PlaybackStateCompat>()
-
+    val playbackState = MutableLiveData<PlaybackStateCompat>().apply {
+        this.postValue(PlaybackStateCompat.Builder().build())
+    }
     val controller = MutableLiveData<MediaControllerCompat>()
 
     private val _nowPlaying = MutableLiveData<MediaMetadataCompat>().apply {
         this.postValue(MediaMetadataCompat.Builder().build())
     }
-
     val nowPlaying : LiveData<MediaMetadataCompat> = _nowPlaying
-
-    val image = MutableLiveData<Bitmap>()
 
     val playbutton_res = MutableLiveData<Int>()
         .apply { postValue(R.drawable.exo_controls_play) }
 
-
-
-
     fun putStreams(streams: MutableList<MediaBrowserCompat.MediaItem>){
         val list = streams.map { stream ->
+            Log.e(Commons.TAG, "stream: " + stream.description.title)
+
             Stream(stream.mediaId!!, getStreamColor(stream.mediaId!!))
         }
 
@@ -67,19 +63,24 @@ class StreamModel : ViewModel() {
         playbackState.postValue(playback)
 
         if(playback.isPlaying) playbutton_res.postValue(R.drawable.exo_controls_pause)
+        else if(playback.isPlayEnabled) playbutton_res.postValue(R.drawable.exo_controls_play)
     }
 
     fun getStreamColor(stream: String) : Int {
-        if(nowPlaying.value!!.genre == stream) {
-            return R.color.colorPrimaryDark
+        if(nowPlaying.value!!.genre == stream && playbackState.value!!.isPlaying) {
+            Log.e(Commons.TAG, "gave the stream object dark color")
+
+            return Stream.PLAYING_COLOR
         }
         else {
-            return R.color.colorAccent
+            Log.e(Commons.TAG, "gave the stream object accented color")
+
+            return R.color.colorPrimary
         }
     }
 
     fun play(stream: Stream){
-        if (stream.mediaId == nowPlaying.value!!.id) {
+        if (stream.mediaId == nowPlaying.value!!.genre) {
             when {
                 playbackState.value!!.isPlaying -> {
                     controller.value!!.transportControls.pause()

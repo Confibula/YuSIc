@@ -45,7 +45,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var googleSignInClient : GoogleSignInClient
     private lateinit var mediaBrowser : MediaBrowserCompat
     private lateinit var viewModel: StreamModel
-    private var playback: PlaybackStateCompat = PlaybackStateCompat.Builder().build()
     private var metadata : MediaMetadataCompat? = null
 
 
@@ -63,7 +62,6 @@ class MainActivity : AppCompatActivity() {
 
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
             playback?.let {
-                this@MainActivity.playback = it
                 viewModel.putPlayback(it)
             }
 
@@ -94,12 +92,11 @@ class MainActivity : AppCompatActivity() {
 
             val controller = MediaControllerCompat
                 .getMediaController(this@MainActivity)
-
             viewModel.putController(controller)
             viewModel.putMetadata(controller.metadata)
+            viewModel.putPlayback(controller.playbackState)
 
             controller.registerCallback(controllerCallback)
-
             mediaBrowser.subscribe(Commons.ROOT_ID, subscriptionCallback)
         }
     }
@@ -128,13 +125,13 @@ class MainActivity : AppCompatActivity() {
         val controller = viewModel.controller.value
         when(item?.itemId){
             R.id.play_button -> {
-                if(playback.isPlaying) {
-                    controller?.transportControls!!.pause()
-                    item.icon = getDrawable(R.drawable.exo_controls_play)
-                }
-                else if(playback.isPlayEnabled) {
-                    controller?.transportControls!!.play()
+                if(controller!!.playbackState.isPlaying) {
+                    controller.transportControls!!.pause()
                     item.icon = getDrawable(R.drawable.exo_controls_pause)
+                }
+                else if(controller.playbackState.isPlayEnabled) {
+                    controller.transportControls!!.play()
+                    item.icon = getDrawable(R.drawable.exo_controls_play)
                 }
             }
             else -> return true
@@ -157,12 +154,6 @@ class MainActivity : AppCompatActivity() {
                     subtitle = data.title
                     Log.e(Commons.TAG, "writes titles to the toolbar: " + data.title)
                 }
-            })
-        }
-
-        findViewById<ImageView>(R.id.image_view).apply {
-            viewModel.image.observe(this@MainActivity, Observer { image ->
-                this.setImageBitmap(image)
             })
         }
 

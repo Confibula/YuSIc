@@ -12,15 +12,12 @@ class BrowseTree {
 
 
     fun update(metadatas: MutableList<MediaMetadataCompat>, positions : MutableList<HashMap<String, Any>>){
-        Log.e(Commons.TAG, "I HAVE REACHED UPDATE metadatas" + positions)
-        Log.e(Commons.TAG, "I HAVE REACHED UPDATE metadatas" + metadatas.toList())
 
         metadatas.forEach { song ->
             val genre : String = song.genre
             val streamies : MutableList<MediaMetadataCompat>
                     = children[genre] ?: buildStreamies(song)
 
-            Log.e(Commons.TAG, song.description.title.toString())
             val position = positions.find {
                 it.containsValue(genre) }
             val id = position!!["id"] as Number

@@ -258,7 +258,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         fun playlist(streamies: MutableList<MediaMetadataCompat>?) : ConcatenatingMediaSource{
             var theStream = ConcatenatingMediaSource()
             streamies?.apply { sortBy { it.id.toLong() } }?.map {song ->
-                Log.e(Commons.TAG, "foreach ran like this: " + song.title)
                 val videoSource = ExtractorMediaSource.Factory(dataFactory)
                     .createMediaSource(Uri.parse(song.mediaUri))
                 theStream = ConcatenatingMediaSource(theStream, videoSource) }

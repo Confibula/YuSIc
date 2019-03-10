@@ -26,7 +26,7 @@ class StreamAdapter(val streamClickListener: (Stream) -> Unit, val context: Cont
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.stream, parent, false)
 
-        return StreamViewHolder(view, streamClickListener)
+        return StreamViewHolder(view, streamClickListener, context)
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -34,7 +34,8 @@ class StreamAdapter(val streamClickListener: (Stream) -> Unit, val context: Cont
         val stream = getItem(position)
 
         holder.stream = stream
-        holder.title.text = stream.mediaId
+        holder.title.text = stream.mediaId.toUpperCase()
+        holder.title.setTextColor(ContextCompat.getColor(context, stream.color))
 
         payloads.forEach { payload ->
             when (payload) {
@@ -55,15 +56,22 @@ class StreamAdapter(val streamClickListener: (Stream) -> Unit, val context: Cont
     }
 }
 
-class StreamViewHolder(view: View, streamClickListener: (Stream) -> Unit)
+class StreamViewHolder(view: View, streamClickListener: (Stream) -> Unit, context: Context)
     : androidx.recyclerview.widget.RecyclerView.ViewHolder(view){
 
     val title: TextView = view.findViewById(R.id.text_view_stream)
     var stream : Stream? = null
+    var color = stream?.color
 
     init {
         view.setOnClickListener {
-            stream?.let { streamClickListener(it) }
+            stream?.let {
+                streamClickListener(it)
+                if(it.color == R.color.colorPrimary) color = PLAYING_COLOR
+                else if(it.color == PLAYING_COLOR) color = R.color.colorPrimary
+                title.setTextColor(ContextCompat.getColor(context, color!!))
+                it.color = color!!
+            }
         }
     }
 
