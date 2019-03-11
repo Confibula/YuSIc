@@ -24,7 +24,7 @@ class BrowseTree {
             val id = position!!["id"] as Number
             val theGenre = position!!["genre"]
             if(streamies.size < count
-                && (song.id.toLong() >= id.toLong() || streamies.size < count)
+                && song.id.toLong() >= id.toLong()
                 && genre == theGenre){
                 streamies.add(song) }
         }

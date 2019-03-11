@@ -375,6 +375,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             super.onPlaybackStateChanged(playback)
 
             Log.e(Commons.TAG, "playbackstate: " + playback?.state)
+            mediaSession.setMetadata(metadata)
 
             playback?.let {
                 this@MediaPlaybackService.playback = it
