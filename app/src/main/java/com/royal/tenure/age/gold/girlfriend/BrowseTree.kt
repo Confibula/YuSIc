@@ -5,6 +5,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.util.Log
 
 class BrowseTree {
+    val count = 13
 
     // This is the ingenious code
     private val children = mutableMapOf<String, MutableList<MediaMetadataCompat>>()
@@ -22,8 +23,8 @@ class BrowseTree {
                 it.containsValue(genre) }
             val id = position!!["id"] as Number
             val theGenre = position!!["genre"]
-            if(streamies.size < 55
-                && (song.id.toLong() >= id.toLong() || streamies.size < 55)
+            if(streamies.size < count
+                && (song.id.toLong() >= id.toLong() || streamies.size < count)
                 && genre == theGenre){
                 streamies.add(song) }
         }

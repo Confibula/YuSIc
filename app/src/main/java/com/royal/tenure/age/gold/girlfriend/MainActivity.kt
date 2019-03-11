@@ -156,9 +156,9 @@ class MainActivity : AppCompatActivity() {
         supportActionBar!!.also {actionBar ->
             viewModel.nowPlaying.observe(this@MainActivity, Observer<MediaMetadataCompat>{ data ->
                 actionBar.apply {
-                    title = data.artist
-                    subtitle = data.title
-                    Log.e(Commons.TAG, "writes titles to the toolbar: " + data.title)
+                    title = data?.artist
+                    subtitle = data?.title
+                    Log.e(Commons.TAG, "writes titles to the toolbar: " + data?.title)
                 }
             })
         }

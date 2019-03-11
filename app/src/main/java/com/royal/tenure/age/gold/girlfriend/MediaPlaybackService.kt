@@ -313,19 +313,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     var playerEventListener = object : Player.EventListener{
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-            when(playbackState){
-                Player.STATE_READY -> {
-                    Log.e(Commons.TAG, "reached state READY uuh")
-                }
-                Player.STATE_ENDED -> {
-                    Log.e(Commons.TAG, "STATE ENDED")
-                }
-                else -> return
-            }
+            metadata.id?.let { mediaSession.setMetadata(metadata) }
         }
         override fun onPositionDiscontinuity(reason: Int) {
-            Log.e(Commons.TAG, "song changed because of DISCONTINUITY")
             setMetadata()
+            metadata.id?.let { mediaSession.setMetadata(metadata) }
         }
     }
 
@@ -382,7 +374,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(playback)
 
-            mediaSession.setMetadata(metadata)
             Log.e(Commons.TAG, "playbackstate: " + playback?.state)
 
             playback?.let {
