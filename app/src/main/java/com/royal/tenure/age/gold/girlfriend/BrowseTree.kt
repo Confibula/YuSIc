@@ -22,9 +22,10 @@ class BrowseTree {
                 it.containsValue(genre) }
             val id = position!!["id"] as Number
             val theGenre = position!!["genre"]
-            if(streamies.size < 55 && song.id.toLong() >= id.toLong() && genre == theGenre){
+            if(streamies.size < 55
+                && (song.id.toLong() >= id.toLong() || streamies.size < 55)
+                && genre == theGenre){
                 streamies.add(song) }
-
         }
     }
     fun buildStreamies(metadata: MediaMetadataCompat) : MutableList<MediaMetadataCompat>{

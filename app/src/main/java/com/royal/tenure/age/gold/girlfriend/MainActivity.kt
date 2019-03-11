@@ -93,7 +93,10 @@ class MainActivity : AppCompatActivity() {
             val controller = MediaControllerCompat
                 .getMediaController(this@MainActivity)
             viewModel.putController(controller)
-            viewModel.putMetadata(controller.metadata)
+            val data = controller.metadata?.let {
+                it
+            } ?: MediaMetadataCompat.Builder().build()
+            viewModel.putMetadata(data)
             viewModel.putPlayback(controller.playbackState)
 
             controller.registerCallback(controllerCallback)
@@ -210,6 +213,7 @@ class MainActivity : AppCompatActivity() {
         if(auth.currentUser == null)  startSignInProcess()
         else if(!mediaBrowser.isConnected) {
             mediaBrowser.connect()
+            startService(Intent(this, MediaPlaybackService::class.java))
         }
 
     }
@@ -246,6 +250,7 @@ class MainActivity : AppCompatActivity() {
         auth.signInWithCredential(credential).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 mediaBrowser.connect()
+                startService(Intent(this, MediaPlaybackService::class.java))
             }
         }
     }

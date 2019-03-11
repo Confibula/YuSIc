@@ -1,6 +1,7 @@
 package com.royal.tenure.age.gold.girlfriend
 
 import android.app.*
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
@@ -19,6 +20,8 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.*
 import android.text.TextUtils.replace
+import android.view.LayoutInflater
+import android.widget.ImageView
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -125,7 +128,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     if(info == null) positions.add(position)
 
 
-                    val metadata : MediaMetadataCompat =
+                    var metadata : MediaMetadataCompat =
                         MediaMetadataCompat.Builder()
                             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, source)
                             .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, bitmap)
@@ -182,10 +185,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         mediaSession = MediaSessionCompat(this, Commons.TAG).apply {
                 setSessionActivity(sessionActivityPendingIntent)
                 isActive = true }
-        sessionToken = mediaSession.sessionToken
 
         controller = mediaSession.controller.also {
             it.registerCallback(mCallback) }
+
+        sessionToken = mediaSession.sessionToken
 
         notificationManager = NotificationManagerCompat.from(this)
 
@@ -277,7 +281,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
             val playlist = playlist(browseTree[mediaId])
+
             exoPlayer.prepare(playlist)
+
             mediaSession.setQueue(queue(mediaId!!))
             setMetadata()
         }
@@ -337,9 +343,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         result.sendResult(streams)
 
     }
+
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? {
         return BrowserRoot(Commons.ROOT_ID, null)
     }
+
     override fun onDestroy() {
         this@MediaPlaybackService
             .unregisterReceiver(receiver)
@@ -383,15 +391,13 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             when(playback?.state){
                 PlaybackStateCompat.STATE_PLAYING -> {
-                    startForeground(Commons.NOTIFICATION_ID, notification())
-                    startService(Intent(this@MediaPlaybackService, MediaPlaybackService::class.java))}
+                    startForeground(Commons.NOTIFICATION_ID, notification()) }
                 else -> {
                     if(playback?.state == PlaybackStateCompat.STATE_PAUSED){
                         stopForeground(false)
                         notificationManager.notify(Commons.NOTIFICATION_ID, notification())}
                     else if (playback?.state == PlaybackStateCompat.STATE_NONE){
                         stopForeground(true)
-                        stopSelf()
                     }
                 }
             }
