@@ -367,8 +367,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     }
 
-    override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? {
-        return BrowserRoot(Commons.ROOT_ID, null)
+    override fun onGetRoot(thePackageName: String, clientUid: Int, rootHints: Bundle?): BrowserRoot? {
+        if(thePackageName == packageName) {
+            return BrowserRoot(Commons.ROOT_ID, null)
+        } else {
+            return BrowserRoot("EMPTY", null)
+        }
     }
 
     override fun onDestroy() {
