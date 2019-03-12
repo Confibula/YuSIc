@@ -31,8 +31,13 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.Glide.init
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.common.api.ApiException
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -46,7 +51,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mediaBrowser : MediaBrowserCompat
     private lateinit var viewModel: StreamModel
     private var metadata : MediaMetadataCompat? = null
-
+    private var analytics : FirebaseAnalytics? = null
 
     val controllerCallback = object : MediaControllerCompat.Callback(){
 
@@ -73,6 +78,13 @@ class MainActivity : AppCompatActivity() {
                         data["id"] = it.id.toDouble()
                         data["genre"] = it.genre as String }
                     updateToFireStoreThePositionData(positionData)
+
+
+                    val bundle = Bundle()
+                    bundle.putString(FirebaseAnalytics.Param.ITEM_ID, it.id)
+                    bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, it.title)
+                    bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "text")
+                    analytics?.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle)
                 }
 
 
@@ -187,6 +199,50 @@ class MainActivity : AppCompatActivity() {
             .requestEmail()
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
+
+        analytics = FirebaseAnalytics.getInstance(this)
+        MobileAds.initialize(this, getString(R.string.ad_id))
+
+        val adView = findViewById<AdView>(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        adView.loadAd(adRequest)
+
+        adView.adListener = object : AdListener(){
+            override fun onAdClicked() {
+                Log.e(Commons.TAG, "I'm in the add")
+                super.onAdClicked()
+            }
+
+            override fun onAdClosed() {
+                Log.e(Commons.TAG, "I'm in the add")
+                super.onAdClosed()
+            }
+
+            override fun onAdFailedToLoad(p0: Int) {
+                Log.e(Commons.TAG, "I'm in the add")
+                super.onAdFailedToLoad(p0)
+            }
+
+            override fun onAdImpression() {
+                Log.e(Commons.TAG, "I'm in the add")
+                super.onAdImpression()
+            }
+
+            override fun onAdLeftApplication() {
+                Log.e(Commons.TAG, "I'm in the add")
+                super.onAdLeftApplication()
+            }
+
+            override fun onAdLoaded() {
+                Log.e(Commons.TAG, "I'm in the add")
+                super.onAdLoaded()
+            }
+
+            override fun onAdOpened() {
+                Log.e(Commons.TAG, "I'm in the add")
+                super.onAdOpened()
+            }
+        }
 
     }
 

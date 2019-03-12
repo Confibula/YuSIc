@@ -54,9 +54,6 @@ class StreamModel : ViewModel() {
 
     fun putMetadata(metadata: MediaMetadataCompat){
         _nowPlaying.postValue(metadata)
-
-        // Todo: bitmap for the image!
-        // Receive the bitmap for the metadata
     }
 
     fun putPlayback(playback: PlaybackStateCompat){

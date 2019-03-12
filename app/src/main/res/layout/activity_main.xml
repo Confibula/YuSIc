@@ -19,8 +19,19 @@
             android:contentDescription="@string/app_name"
             android:layout_height="wrap_content"
             android:id="@+id/image_view"
-            app:layout_constraintTop_toBottomOf="@id/recycler_view"
-            app:layout_constraintBottom_toTopOf="@id/toolbar_view"/>
+            app:layout_constraintTop_toBottomOf="@id/recycler_view"/>
+
+    <com.google.android.gms.ads.AdView
+            app:layout_constraintBottom_toTopOf="@id/toolbar_view"
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/adView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            ads:adSize="BANNER"
+            ads:adUnitId="@string/test_ad_unit">
+    </com.google.android.gms.ads.AdView>
 
     <include layout="@layout/tool_bar"
              android:id="@+id/toolbar_view"

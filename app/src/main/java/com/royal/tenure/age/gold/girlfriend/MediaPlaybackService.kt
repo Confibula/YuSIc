@@ -40,6 +40,8 @@ import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.offline.DownloadService.startForeground
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.exoplayer2.source.TrackGroupArray
+import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.gms.common.internal.service.Common
 import com.google.android.gms.flags.Singletons
 import com.google.firebase.firestore.FirebaseFirestore
@@ -312,12 +314,41 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     var playerEventListener = object : Player.EventListener{
+        override fun onLoadingChanged(isLoading: Boolean) {
+            mediaSession.setMetadata(metadata)
+        }
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-            metadata.id?.let { mediaSession.setMetadata(metadata) }
+            mediaSession.setMetadata(metadata)
         }
         override fun onPositionDiscontinuity(reason: Int) {
             setMetadata()
-            metadata.id?.let { mediaSession.setMetadata(metadata) }
+        }
+        override fun onSeekProcessed() {
+            mediaSession.setMetadata(metadata)
+        }
+
+        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {
+            mediaSession.setMetadata(metadata)
+        }
+
+        override fun onPlayerError(error: ExoPlaybackException?) {
+            mediaSession.setMetadata(metadata)
+        }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            mediaSession.setMetadata(metadata)
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            mediaSession.setMetadata(metadata)
+        }
+
+        override fun onTimelineChanged(timeline: Timeline?, manifest: Any?, reason: Int) {
+            mediaSession.setMetadata(metadata)
+        }
+
+        override fun onTracksChanged(trackGroups: TrackGroupArray?, trackSelections: TrackSelectionArray?) {
+            mediaSession.setMetadata(metadata)
         }
     }
 
@@ -373,9 +404,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(playback)
-
-            Log.e(Commons.TAG, "playbackstate: " + playback?.state)
-            mediaSession.setMetadata(metadata)
 
             playback?.let {
                 this@MediaPlaybackService.playback = it
