@@ -30,7 +30,7 @@
             android:layout_centerHorizontal="true"
             android:layout_alignParentBottom="true"
             ads:adSize="BANNER"
-            ads:adUnitId="@string/test_ad_unit">
+            ads:adUnitId="@string/banner_id">
     </com.google.android.gms.ads.AdView>
 
     <include layout="@layout/tool_bar"

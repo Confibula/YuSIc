@@ -60,9 +60,8 @@ class MainActivity : AppCompatActivity() {
 
             metadata?.id?.let {
                 this@MainActivity.metadata = metadata
-                    viewModel.putMetadata(metadata)
-                    Log.e(Commons.TAG, "metadata sent to the viewmodel: " + metadata.title)
-                }
+                viewModel.putMetadata(metadata)
+            }
         }
 
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
@@ -79,12 +78,6 @@ class MainActivity : AppCompatActivity() {
                         data["genre"] = it.genre as String }
                     updateToFireStoreThePositionData(positionData)
 
-
-                    val bundle = Bundle()
-                    bundle.putString(FirebaseAnalytics.Param.ITEM_ID, it.id)
-                    bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, it.title)
-                    bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "text")
-                    analytics?.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle)
                 }
 
 
@@ -172,6 +165,12 @@ class MainActivity : AppCompatActivity() {
                     subtitle = data?.title
                     Log.e(Commons.TAG, "writes titles to the toolbar: " + data?.title)
                 }
+            })
+        }
+
+        findViewById<ImageView>(R.id.image_view).also { view ->
+            viewModel.image.observe(this, Observer {
+                view.setImageBitmap(it)
             })
         }
 

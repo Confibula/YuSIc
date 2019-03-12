@@ -36,6 +36,8 @@ class StreamModel : ViewModel() {
     val playbutton_res = MutableLiveData<Int>()
         .apply { postValue(R.drawable.exo_notification_play) }
 
+    val image = MutableLiveData<Bitmap>()
+
     fun putStreams(streams: MutableList<MediaBrowserCompat.MediaItem>){
         val list = streams.map { stream ->
             Log.e(Commons.TAG, "stream: " + stream.description.title)
@@ -54,6 +56,12 @@ class StreamModel : ViewModel() {
 
     fun putMetadata(metadata: MediaMetadataCompat){
         _nowPlaying.postValue(metadata)
+    }
+
+
+    // Todo: add image to layout
+    fun putImage(bitmap: Bitmap){
+        image.postValue(bitmap)
     }
 
     fun putPlayback(playback: PlaybackStateCompat){

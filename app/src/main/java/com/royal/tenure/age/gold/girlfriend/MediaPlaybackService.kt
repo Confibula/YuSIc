@@ -45,6 +45,7 @@ import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.gms.common.internal.service.Common
 import com.google.android.gms.flags.Singletons
 import com.google.firebase.firestore.FirebaseFirestore
+import com.squareup.okhttp.Call
 import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -391,10 +392,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         return super.onBind(intent)
     }
 
+
     // As far as I know, having multiple controllers for a session is okay.
     // This is my second controller. I was worrying whether this is bad code,
     // am now fairly confident, it's completely fine!
-    val mCallback: MediaControllerCompat.Callback = object : MediaControllerCompat.Callback(){
+    val mCallback = object : MediaControllerCompat.Callback(){
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
