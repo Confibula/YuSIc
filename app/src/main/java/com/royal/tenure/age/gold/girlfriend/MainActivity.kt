@@ -11,7 +11,9 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.Drawable
+import android.os.AsyncTask
 import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
@@ -43,6 +45,11 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.auth.User
+import java.io.BufferedInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.stream.Stream
 
 class MainActivity : AppCompatActivity() {
@@ -53,14 +60,45 @@ class MainActivity : AppCompatActivity() {
     private var metadata : MediaMetadataCompat? = null
     private var analytics : FirebaseAnalytics? = null
 
+    inner class GetBitmap : AsyncTask<String, Void, MutableList<Bitmap>>(){
+        override fun doInBackground(vararg bitmapUris: String?): MutableList<Bitmap> {
+            var inputStream: InputStream? = null
+            val bitmaps : MutableList<Bitmap> = mutableListOf()
+
+            try {
+                val url : URL = URL(bitmapUris.first())
+                val urlConnection : HttpURLConnection = url.openConnection() as HttpURLConnection
+                inputStream = BufferedInputStream(urlConnection.inputStream)
+
+                val bitmapOptions = BitmapFactory.Options()
+                bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888
+                val bitmap = BitmapFactory.decodeStream(inputStream, null, bitmapOptions)
+                bitmaps.add(bitmap!!)
+
+            } catch (e: IOException){
+                return mutableListOf()
+            } finally {
+                inputStream?.close()
+            }
+            return bitmaps
+        }
+        override fun onPostExecute(result: MutableList<Bitmap>) {
+            var bitmap : Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            if(!result.isEmpty()) bitmap = result.first()
+            viewModel.putImage(bitmap)
+            super.onPostExecute(result)
+        }
+    }
+
     val controllerCallback = object : MediaControllerCompat.Callback(){
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
 
-            metadata?.id?.let {
+            metadata?.id?.also {
                 this@MainActivity.metadata = metadata
                 viewModel.putMetadata(metadata)
+                GetBitmap().execute(metadata.artUri)
             }
         }
 
@@ -68,20 +106,18 @@ class MainActivity : AppCompatActivity() {
             playback?.let {
                 viewModel.putPlayback(it)
             }
-
-            val positionData = HashMap<String, Any>()
-
-                metadata?.let {
-                    positionData.also { data ->
-                        Log.e(Commons.TAG, "the metadata: " + it.genre)
-                        data["id"] = it.id.toDouble()
-                        data["genre"] = it.genre as String }
-                    updateToFireStoreThePositionData(positionData)
-
-                }
-
-
             super.onPlaybackStateChanged(playback)
+        }
+    }
+
+    fun putPositionData(){
+        val positionData = HashMap<String, Any>()
+        metadata?.let {
+            positionData.also { data ->
+                Log.e(Commons.TAG, "the metadata: " + it.genre)
+                data["id"] = it.id.toDouble()
+                data["genre"] = it.genre as String }
+            updateToFireStoreThePositionData(positionData)
         }
     }
 
@@ -95,6 +131,7 @@ class MainActivity : AppCompatActivity() {
                 MediaControllerCompat.setMediaController(this@MainActivity, controller)
             }
 
+            // updating for every return to the Main UI
             val controller = MediaControllerCompat
                 .getMediaController(this@MainActivity)
             viewModel.putController(controller)
@@ -103,6 +140,7 @@ class MainActivity : AppCompatActivity() {
             } ?: MediaMetadataCompat.Builder().build()
             viewModel.putMetadata(data)
             viewModel.putPlayback(controller.playbackState)
+            GetBitmap().execute(data.artUri)
 
             controller.registerCallback(controllerCallback)
             mediaBrowser.subscribe(Commons.ROOT_ID, subscriptionCallback)
@@ -113,7 +151,6 @@ class MainActivity : AppCompatActivity() {
         override fun onChildrenLoaded(parentId: String, streams: MutableList<MediaBrowserCompat.MediaItem>) {
             super.onChildrenLoaded(parentId, streams)
 
-            Log.e(Commons.TAG, "streams loaded")
             viewModel.putStreams(streams)
         }
     }
@@ -169,8 +206,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<ImageView>(R.id.image_view).also { view ->
-            viewModel.image.observe(this, Observer {
-                view.setImageBitmap(it)
+            viewModel.image.observe(this@MainActivity, Observer<Bitmap> { image ->
+                Log.e(Commons.TAG, "ran observercode for the image with: ")
+                view.setImageBitmap(image)
             })
         }
 

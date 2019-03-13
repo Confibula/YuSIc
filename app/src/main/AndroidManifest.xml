@@ -3,6 +3,7 @@
           package="com.royal.tenure.age.gold.girlfriend">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <dist:module
             dist:instant="true"/>
@@ -18,7 +19,8 @@
                 android:name="com.google.android.gms.ads.APPLICATION_ID"
                 android:value="@string/ad_id"/>
 
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+                  android:launchMode="singleTask">
             <intent-filter android:order="1">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.BROWSABLE"/>

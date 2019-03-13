@@ -36,18 +36,18 @@ class StreamModel : ViewModel() {
     val playbutton_res = MutableLiveData<Int>()
         .apply { postValue(R.drawable.exo_notification_play) }
 
-    val image = MutableLiveData<Bitmap>()
+    val image = MutableLiveData<Bitmap>().apply {
+        postValue(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
+    }
 
     fun putStreams(streams: MutableList<MediaBrowserCompat.MediaItem>){
         val list = streams.map { stream ->
-            Log.e(Commons.TAG, "stream: " + stream.description.title)
 
             Stream(stream.mediaId!!, getStreamColor(stream.mediaId!!))
         }
 
         this._streams.postValue(list)
 
-        Log.e(Commons.TAG, "ran putStreams: " + streams.size)
     }
 
     fun putController(controller : MediaControllerCompat){
@@ -59,7 +59,6 @@ class StreamModel : ViewModel() {
     }
 
 
-    // Todo: add image to layout
     fun putImage(bitmap: Bitmap){
         image.postValue(bitmap)
     }

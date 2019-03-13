@@ -14,11 +14,17 @@ class BrowseTree {
 
     fun update(metadatas: MutableList<MediaMetadataCompat>, positions : MutableList<HashMap<String, Any>>){
 
+        metadatas.shuffle()
         metadatas.forEach { song ->
             val genre : String = song.genre
             val streamies : MutableList<MediaMetadataCompat>
                     = children[genre] ?: buildStreamies(song)
 
+            if(streamies.size < count){
+                streamies.add(song)
+            }
+
+            /*
             val position = positions.find {
                 it.containsValue(genre) }
             val id = position!!["id"] as Number
@@ -27,8 +33,10 @@ class BrowseTree {
                 && song.id.toLong() >= id.toLong()
                 && genre == theGenre){
                 streamies.add(song) }
+            */
         }
     }
+
     fun buildStreamies(metadata: MediaMetadataCompat) : MutableList<MediaMetadataCompat>{
         val genre = metadata.genre
         val stream = MediaMetadataCompat.Builder()

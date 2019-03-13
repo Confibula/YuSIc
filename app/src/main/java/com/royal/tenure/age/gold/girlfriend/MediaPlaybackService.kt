@@ -131,7 +131,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     if(info == null) positions.add(position)
 
 
-                    var metadata : MediaMetadataCompat =
+                    val metadata : MediaMetadataCompat =
                         MediaMetadataCompat.Builder()
                             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, source)
                             .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, bitmap)
@@ -277,18 +277,17 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 val theStremie = MediaSessionCompat.QueueItem(streamie.description, streamie.id.toLong())
                 streamies.add(theStremie)
             }
-            return streamies.apply {
-                sortBy {
-                    it.queueId } }
+            return streamies
         }
 
         override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
-            val playlist = playlist(browseTree[mediaId])
 
-            exoPlayer.prepare(playlist)
-
-            mediaSession.setQueue(queue(mediaId!!))
-            setMetadata()
+            val list = queue(mediaId!!)
+            mediaSession.setQueue(list)
+            val videoSource = ExtractorMediaSource.Factory(dataFactory)
+                .createMediaSource(list.first().description.mediaUri)
+            exoPlayer.prepare(videoSource)
+            setMetadata_andQueueUpdate()
         }
 
         override fun onPrepareFromUri(uri: Uri?, extras: Bundle?) = Unit
@@ -297,7 +296,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
     }
 
-    fun setMetadata(){
+    fun setMetadata_andQueueUpdate(){
         val id = controller.queue.first().queueId
         val nowPlaying = metadatas.find {
             it.id.toLong() == id }
@@ -311,45 +310,37 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             queue = list }
         if(!queue.isEmpty()) mediaSession.setQueue(queue)
 
-        //Log.e(Commons.TAG, "logged: " + queue.first().description.title)
+        //Log.e(Commons.TAG, "logged: " + queue.first().description?.title)
     }
 
     var playerEventListener = object : Player.EventListener{
         override fun onLoadingChanged(isLoading: Boolean) {
-            mediaSession.setMetadata(metadata)
-        }
-        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-            mediaSession.setMetadata(metadata)
         }
         override fun onPositionDiscontinuity(reason: Int) {
-            setMetadata()
-        }
-        override fun onSeekProcessed() {
-            mediaSession.setMetadata(metadata)
+
         }
 
+        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+            mediaSession.setMetadata(metadata)
+
+            if(playbackState == Player.STATE_ENDED){
+                val uri = controller.queue.first().description.mediaUri
+                setMetadata_andQueueUpdate()
+                val videoSource = ExtractorMediaSource.Factory(dataFactory)
+                    .createMediaSource(uri)
+                exoPlayer.prepare(videoSource)
+                notificationManager.notify(Commons.NOTIFICATION_ID, notification())
+            }
+        }
         override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {
-            mediaSession.setMetadata(metadata)
-        }
-
-        override fun onPlayerError(error: ExoPlaybackException?) {
-            mediaSession.setMetadata(metadata)
-        }
-
-        override fun onRepeatModeChanged(repeatMode: Int) {
-            mediaSession.setMetadata(metadata)
-        }
-
-        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-            mediaSession.setMetadata(metadata)
         }
 
         override fun onTimelineChanged(timeline: Timeline?, manifest: Any?, reason: Int) {
-            mediaSession.setMetadata(metadata)
+
         }
 
         override fun onTracksChanged(trackGroups: TrackGroupArray?, trackSelections: TrackSelectionArray?) {
-            mediaSession.setMetadata(metadata)
+
         }
     }
 
@@ -403,7 +394,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             metadata?.id?.let {
                 this@MediaPlaybackService.metadata = metadata
-                notificationManager.notify(Commons.NOTIFICATION_ID, notification())
             }
 
         }
