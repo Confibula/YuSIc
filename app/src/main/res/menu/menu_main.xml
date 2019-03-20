@@ -8,4 +8,14 @@
             android:title="@string/play_pause"
             android:icon="@drawable/exo_controls_play"/>
 
+    <item
+            android:id="@+id/forward_button"
+            android:title="@string/forward"
+            android:icon="@drawable/exo_controls_next"/>
+
+    <item
+            android:id="@+id/repeat_button"
+            android:title="@string/repeat"
+            android:icon="@drawable/exo_controls_repeat_one"/>
+
 </menu>

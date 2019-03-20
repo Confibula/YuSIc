@@ -14,6 +14,9 @@ class Commons{
         const val NOTIFICATION_ID = 10946
         const val NOTIFICATION_CHANNEL = "6765"
         const val ROOT_ID = "610"
+        const val CONSENT_CHOICE = "privacy policy user choice"
+        const val PRIVACY_INFO = "Privacy info"
+        const val PRIVACY_REQUEST = 1
     }
 }
 

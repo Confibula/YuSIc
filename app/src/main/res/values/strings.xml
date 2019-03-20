@@ -8,7 +8,21 @@
     <string name="repeat">Repeat</string>
     <string name="play_pause">Toggle Play</string>
     <string name="like_button">Like</string>
+    <string name="forward">forward button</string>
     <string name="ad_id">ca-app-pub-8534808986359666~2554948092</string>
     <string name="banner_id">ca-app-pub-8534808986359666/4788916111</string>
     <string name="test_ad_unit">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="apology">
+        We are sorry, but we need ads to pay for our Servers that host the music files
+    </string>
+    <string name="privacy_policy">
+        Privacy Policy
+        \n\nYuSIc collects user analytics, more specifically the \'Android advertising identifier\', and it\'s linked information.
+        \nPrimarily, this helps us to run targeted ads in the best ways possible.
+
+        \n\nIf you wish to use the music application \'YuSIc\',
+        you are consenting to us collecting information about how you interact with the applications advertisements.
+    </string>
+    <string name="consent">consent</string>
+    <string name="decline">decline</string>
 </resources>

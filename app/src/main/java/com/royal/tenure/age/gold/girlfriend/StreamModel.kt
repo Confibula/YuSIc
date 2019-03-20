@@ -36,8 +36,8 @@ class StreamModel : ViewModel() {
     val playbutton_res = MutableLiveData<Int>()
         .apply { postValue(R.drawable.exo_notification_play) }
 
-    val image = MutableLiveData<Bitmap>().apply {
-        postValue(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
+    val repeat_res = MutableLiveData<Int>().apply {
+        postValue(R.drawable.exo_controls_repeat_off)
     }
 
     fun putStreams(streams: MutableList<MediaBrowserCompat.MediaItem>){
@@ -45,22 +45,21 @@ class StreamModel : ViewModel() {
 
             Stream(stream.mediaId!!, getStreamColor(stream.mediaId!!))
         }
-
         this._streams.postValue(list)
-
     }
 
     fun putController(controller : MediaControllerCompat){
         this.controller.postValue(controller)
+
+        if (controller.repeatMode == PlaybackStateCompat.REPEAT_MODE_NONE) {
+            repeat_res.postValue(R.drawable.exo_controls_repeat_off)
+        }else if(controller.repeatMode == PlaybackStateCompat.REPEAT_MODE_ONE) {
+            repeat_res.postValue(R.drawable.exo_controls_repeat_one)
+        }
     }
 
     fun putMetadata(metadata: MediaMetadataCompat){
         _nowPlaying.postValue(metadata)
-    }
-
-
-    fun putImage(bitmap: Bitmap){
-        image.postValue(bitmap)
     }
 
     fun putPlayback(playback: PlaybackStateCompat){
@@ -68,6 +67,7 @@ class StreamModel : ViewModel() {
 
         if(playback.isPlaying) playbutton_res.postValue(R.drawable.exo_notification_pause)
         else if(playback.isPlayEnabled) playbutton_res.postValue(R.drawable.exo_notification_play)
+
     }
 
     fun getStreamColor(stream: String) : Int {

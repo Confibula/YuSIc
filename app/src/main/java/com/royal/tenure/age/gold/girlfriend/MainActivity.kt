@@ -1,5 +1,7 @@
 package com.royal.tenure.age.gold.girlfriend
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ClipData
 import android.content.ComponentName
 import android.content.Context
@@ -10,9 +12,12 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import android.content.Intent
+import android.content.Intent.ACTION_PICK
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.Drawable
+import android.media.AudioManager
+import android.media.session.PlaybackState
 import android.os.AsyncTask
 import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
@@ -33,6 +38,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.Glide.init
+import com.google.android.exoplayer2.C
+import com.google.android.exoplayer2.Player
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdView
@@ -60,36 +67,6 @@ class MainActivity : AppCompatActivity() {
     private var metadata : MediaMetadataCompat? = null
     private var analytics : FirebaseAnalytics? = null
 
-    inner class GetBitmap : AsyncTask<String, Void, MutableList<Bitmap>>(){
-        override fun doInBackground(vararg bitmapUris: String?): MutableList<Bitmap> {
-            var inputStream: InputStream? = null
-            val bitmaps : MutableList<Bitmap> = mutableListOf()
-
-            try {
-                val url : URL = URL(bitmapUris.first())
-                val urlConnection : HttpURLConnection = url.openConnection() as HttpURLConnection
-                inputStream = BufferedInputStream(urlConnection.inputStream)
-
-                val bitmapOptions = BitmapFactory.Options()
-                bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888
-                val bitmap = BitmapFactory.decodeStream(inputStream, null, bitmapOptions)
-                bitmaps.add(bitmap!!)
-
-            } catch (e: IOException){
-                return mutableListOf()
-            } finally {
-                inputStream?.close()
-            }
-            return bitmaps
-        }
-        override fun onPostExecute(result: MutableList<Bitmap>) {
-            var bitmap : Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-            if(!result.isEmpty()) bitmap = result.first()
-            viewModel.putImage(bitmap)
-            super.onPostExecute(result)
-        }
-    }
-
     val controllerCallback = object : MediaControllerCompat.Callback(){
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
@@ -98,7 +75,6 @@ class MainActivity : AppCompatActivity() {
             metadata?.id?.also {
                 this@MainActivity.metadata = metadata
                 viewModel.putMetadata(metadata)
-                GetBitmap().execute(metadata.artUri)
             }
         }
 
@@ -107,17 +83,6 @@ class MainActivity : AppCompatActivity() {
                 viewModel.putPlayback(it)
             }
             super.onPlaybackStateChanged(playback)
-        }
-    }
-
-    fun putPositionData(){
-        val positionData = HashMap<String, Any>()
-        metadata?.let {
-            positionData.also { data ->
-                Log.e(Commons.TAG, "the metadata: " + it.genre)
-                data["id"] = it.id.toDouble()
-                data["genre"] = it.genre as String }
-            updateToFireStoreThePositionData(positionData)
         }
     }
 
@@ -140,7 +105,6 @@ class MainActivity : AppCompatActivity() {
             } ?: MediaMetadataCompat.Builder().build()
             viewModel.putMetadata(data)
             viewModel.putPlayback(controller.playbackState)
-            GetBitmap().execute(data.artUri)
 
             controller.registerCallback(controllerCallback)
             mediaBrowser.subscribe(Commons.ROOT_ID, subscriptionCallback)
@@ -158,11 +122,17 @@ class MainActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         MenuInflater(this).inflate(R.menu.menu_main, menu)
         val playButt = menu!!.findItem(R.id.play_button)
+        val repeatButt = menu.findItem(R.id.repeat_button)
         viewModel.playbutton_res.observe(this, Observer { res ->
             playButt.icon = getDrawable(res)
         })
+        viewModel.repeat_res.observe(this, Observer {res ->
+            repeatButt.icon = getDrawable(res)
+        })
         Log.e(Commons.TAG, "button was: " + viewModel.playbutton_res.value!!)
         playButt.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+        menu.findItem(R.id.forward_button).setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+        repeatButt.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
 
         // Probably tells it to create. False means 'not create'
 
@@ -180,6 +150,25 @@ class MainActivity : AppCompatActivity() {
                 else if(controller.playbackState.isPlayEnabled) {
                     controller.transportControls!!.play()
                     item.icon = getDrawable(R.drawable.exo_controls_play)
+                }
+            }
+            R.id.forward_button -> {
+                if(controller!!.playbackState.state != PlaybackStateCompat.STATE_NONE) {
+                    controller.transportControls?.skipToNext()
+                }
+            }
+            R.id.repeat_button -> {
+                if(controller!!.playbackState.state != PlaybackStateCompat.STATE_NONE){
+                    if(controller.repeatMode == Player.REPEAT_MODE_OFF){
+                        Log.e(Commons.TAG, "IF")
+                        controller.transportControls.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ONE)
+                        item.icon = getDrawable(R.drawable.exo_controls_repeat_one)
+                    } else if (controller.repeatMode == Player.REPEAT_MODE_ONE){
+                        Log.e(Commons.TAG, "ELSE IF")
+                        controller.transportControls?.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_NONE)
+                        item.icon = getDrawable(R.drawable.exo_controls_repeat_off)
+                    }
+                    Log.e(Commons.TAG, "STATE CHECK")
                 }
             }
             else -> return true
@@ -205,12 +194,14 @@ class MainActivity : AppCompatActivity() {
             })
         }
 
+
         findViewById<ImageView>(R.id.image_view).also { view ->
-            viewModel.image.observe(this@MainActivity, Observer<Bitmap> { image ->
+            viewModel.nowPlaying.observe(this@MainActivity, Observer<MediaMetadataCompat> { data ->
                 Log.e(Commons.TAG, "ran observercode for the image with: ")
-                view.setImageBitmap(image)
+                view.setImageBitmap(data.bitmap)
             })
         }
+
 
         mediaBrowser = MediaBrowserCompat(this,
             ComponentName(this, MediaPlaybackService::class.java),
@@ -283,37 +274,26 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    fun updateToFireStoreThePositionData(positionData: HashMap<String, Any>){
-        val info = HashMap<String, Any>()
-        info["id"] = positionData["id"] as Number
-        info["genre"] = positionData["genre"]!!
-
-        db.collection("users")
-            .document(auth.currentUser!!.uid)
-            .collection("positions")
-            .document(positionData["genre"] as String)
-            .set(info)
-            .addOnFailureListener{
-                Log.e(Commons.TAG, "failed to write position data: %e", it)
-            }}
-
-
     override fun onStart() {
         super.onStart()
 
+        val consent = getSharedPreferences(Commons.PRIVACY_INFO, Context.MODE_PRIVATE)
+            .getBoolean(Commons.CONSENT_CHOICE, false)
 
-        Log.e(Commons.TAG, "current user email: " + auth.currentUser?.email)
-        if(auth.currentUser == null)  startSignInProcess()
-        else if(!mediaBrowser.isConnected) {
-            mediaBrowser.connect()
-            startService(Intent(this, MediaPlaybackService::class.java))
+        if(!consent){
+            Log.e(Commons.TAG, "started running consent false code")
+            startActivityForResult(
+                Intent(this, ConsentActivity::class.java),
+                Commons.PRIVACY_REQUEST
+            )
         }
-
+        else if(consent){
+            connecting()
+        }
     }
 
     override fun onStop() {
         if(mediaBrowser.isConnected) mediaBrowser.disconnect()
-
         super.onStop()
     }
 
@@ -335,6 +315,10 @@ class MainActivity : AppCompatActivity() {
                 Log.e(Commons.TAG, "ApiException: " + e)
             }
         }
+
+        if (requestCode == Commons.PRIVACY_REQUEST){
+            Log.e(Commons.TAG, "Reach the REQUEST dealer")
+        }
     }
 
     private fun firebaseAuthenticationWithGoogle(acct: GoogleSignInAccount){
@@ -342,9 +326,16 @@ class MainActivity : AppCompatActivity() {
 
         auth.signInWithCredential(credential).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                mediaBrowser.connect()
-                startService(Intent(this, MediaPlaybackService::class.java))
+                connecting()
             }
+        }
+    }
+
+    private fun connecting(){
+        if(!mediaBrowser.isConnected){
+            mediaBrowser.connect()
+            volumeControlStream = C.CONTENT_TYPE_MUSIC
+            startService(Intent(this, MediaPlaybackService::class.java))
         }
     }
 }

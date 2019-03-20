@@ -41,6 +41,7 @@ import com.google.android.exoplayer2.offline.DownloadService.startForeground
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ExtractorMediaSource
 import com.google.android.exoplayer2.source.TrackGroupArray
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.gms.common.internal.service.Common
 import com.google.android.gms.flags.Singletons
@@ -60,7 +61,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private var browseTree: BrowseTree = BrowseTree()
 
     private val exoPlayer : ExoPlayer by lazy {
-        ExoPlayerFactory.newSimpleInstance(this).apply {
+        ExoPlayerFactory.newSimpleInstance(this,
+            DefaultRenderersFactory(this),
+            DefaultTrackSelector(),
+            DefaultLoadControl.Builder().setBufferDurationsMs(
+                13000, 21000, 8000, 8000
+            ).createDefaultLoadControl()).apply {
             setAudioAttributes(uAmpAudioAttributes, true)
         }
     }
@@ -84,15 +90,24 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             )
 
             // Creating the channel
-            val mChannel = NotificationChannel(
-                Commons.NOTIFICATION_CHANNEL,
-                getString(R.string.notification_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply { description = getString(R.string.description) }
-            notificationManager.createNotificationChannel(mChannel)
-            setChannelId(Commons.NOTIFICATION_CHANNEL)
+            if (shouldCreateNowPlayingChannel()) {
+                val mChannel = NotificationChannel(
+                    Commons.NOTIFICATION_CHANNEL,
+                    getString(R.string.notification_name),
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply { description = getString(R.string.description) }
+                notificationManager.createNotificationChannel(mChannel)
+                setChannelId(Commons.NOTIFICATION_CHANNEL)
+            }
         }
     }
+
+    private fun shouldCreateNowPlayingChannel() =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !nowPlayingChannelExists()
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun nowPlayingChannelExists() =
+        notificationManager.getNotificationChannel(Commons.NOTIFICATION_CHANNEL) != null
 
     private lateinit var controller : MediaControllerCompat
     private lateinit var mediaSession : MediaSessionCompat
@@ -110,7 +125,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         db.collection("stream")
             .get()
-
             .addOnSuccessListener {datas ->
                 for(data in datas){
                     val song: Map<String, Any> = data.data
@@ -120,16 +134,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     val title = song["title"] as String
                     val id = song["id"] as String
                     val genre = song["genre"] as String
-
-                    val position : HashMap<String, Any> = HashMap()
-                    position["genre"] = genre
-                    position["id"] = 1
-
-                    val info : HashMap<String, Any>? = positions.find {
-                        it.containsValue(position["genre"])
-                    }
-                    if(info == null) positions.add(position)
-
 
                     val metadata : MediaMetadataCompat =
                         MediaMetadataCompat.Builder()
@@ -141,38 +145,16 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                             .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
                             .build()
                     metadatas.add(metadata)
+                    Log.e(Commons.TAG, "the metadata was:" + metadata.title)
                 }
 
-            }.continueWithTask{
-                db.collection("users")
-                    .document(auth.currentUser!!.uid)
-                    .collection("positions")
-                    .get()
-
-                    .addOnSuccessListener { datas ->
-                        for(data in datas) {
-                            val info : Map<String, Any> = data.data
-                            val position : HashMap<String, Any?> = HashMap()
-                            position["genre"] = info["genre"] as String
-                            position["id"] = info["id"] as Number
-
-                            positions.find {
-                                it.containsValue(position["genre"])
-                            }?.apply {
-                                replace("id", position["id"]!!)
-                            }
-                        }
-                    }
-                    .addOnFailureListener{
-                        Log.e(Commons.TAG, "failed to read %e ", it)
-                    }
-
+            }.addOnFailureListener {
+                Log.e(Commons.TAG, "it failed loading: " + it)
             }.continueWith {
                 Log.e(Commons.TAG, "ran updating")
                 browseTree.update(metadatas, positions)
                 notifyChildrenChanged(Commons.ROOT_ID)
             }
-
     }
 
     override fun onCreate() {
@@ -208,7 +190,38 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 this,
                 Util.getUserAgent(this, Commons.APP))
 
-            it.setPlayer(exoPlayer, playbackPreparer) }
+            it.setPlayer(exoPlayer, playbackPreparer)
+
+            it.setQueueNavigator(object : MediaSessionConnector.QueueNavigator{
+                override fun onSkipToQueueItem(player: Player?, id: Long) {}
+
+                override fun onCurrentWindowIndexChanged(player: Player?) {}
+
+                override fun onCommand(player: Player?, command: String?, extras: Bundle?, cb: ResultReceiver?) {}
+
+                override fun getSupportedQueueNavigatorActions(player: Player?): Long {
+                    return ACTION_SKIP_TO_NEXT or ACTION_SKIP_TO_PREVIOUS
+                }
+
+                override fun getActiveQueueItemId(player: Player?): Long = 0
+
+                override fun onSkipToPrevious(player: Player?) {
+                    if(controller.repeatMode == PlaybackStateCompat.REPEAT_MODE_NONE){
+                        player!!.repeatMode = Player.REPEAT_MODE_ONE
+                    } else if (controller.repeatMode == PlaybackStateCompat.REPEAT_MODE_ONE){
+                        player!!.repeatMode = Player.REPEAT_MODE_OFF
+                    }
+                }
+
+                override fun getCommands(): Array<String>? = null
+
+                override fun onTimelineChanged(player: Player?) {}
+
+                override fun onSkipToNext(player: Player?) {
+                    queueAndMetadataAndPlay()
+                }
+            })
+        }
 
 
     }
@@ -219,7 +232,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun onSeekTo(player: Player?, position: Long) = Unit
 
-        override fun onCommand(player: Player?, command: String?, extras: Bundle?, cb: ResultReceiver?) = Unit
+        override fun onCommand(player: Player?, command: String?, extras: Bundle?, cb: ResultReceiver?){
+        }
 
         override fun onPause(player: Player?) {
             player!!.playWhenReady = false
@@ -247,7 +261,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun onSetRepeatMode(player: Player?, repeatMode: Int){
             player!!.repeatMode = repeatMode
-
         }
     }
 
@@ -281,13 +294,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
 
         override fun onPrepareFromMediaId(mediaId: String?, extras: Bundle?) {
-
             val list = queue(mediaId!!)
             mediaSession.setQueue(list)
-            val videoSource = ExtractorMediaSource.Factory(dataFactory)
-                .createMediaSource(list.first().description.mediaUri)
-            exoPlayer.prepare(videoSource)
-            setMetadata_andQueueUpdate()
+            Log.e(Commons.TAG, "metadata was initially set to: " + metadata.title)
+            queueAndMetadataAndPlay()
         }
 
         override fun onPrepareFromUri(uri: Uri?, extras: Bundle?) = Unit
@@ -296,21 +306,24 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
     }
 
-    fun setMetadata_andQueueUpdate(){
-        val id = controller.queue.first().queueId
-        val nowPlaying = metadatas.find {
-            it.id.toLong() == id }
-        mediaSession.setMetadata(nowPlaying)
-        metadata = nowPlaying!!
+    fun queueAndMetadataAndPlay(){
+        if(!controller.queue.isEmpty()) {
+            val use = controller.queue.first()
+            val data = metadatas.find {
+                it.id.toLong() == use.queueId }
+            metadata = data!!
 
-        var queue = mutableListOf<MediaSessionCompat.QueueItem>()
-        val list = controller.queue
-        if(!list.isEmpty()) {
+            val uri = controller.queue.first().description.mediaUri
+            val videoSource = ExtractorMediaSource.Factory(dataFactory)
+                .createMediaSource(uri)
+            exoPlayer.prepare(videoSource)
+            GetBitmap().execute(metadata.artUri)
+            val list = controller.queue
             list.removeAt(0)
-            queue = list }
-        if(!queue.isEmpty()) mediaSession.setQueue(queue)
+            mediaSession.setQueue(list)
 
-        //Log.e(Commons.TAG, "logged: " + queue.first().description?.title)
+            notificationManager.notify(Commons.NOTIFICATION_ID, notification())
+        }
     }
 
     var playerEventListener = object : Player.EventListener{
@@ -322,15 +335,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
             mediaSession.setMetadata(metadata)
-
-            if(playbackState == Player.STATE_ENDED){
-                val uri = controller.queue.first().description.mediaUri
-                setMetadata_andQueueUpdate()
-                val videoSource = ExtractorMediaSource.Factory(dataFactory)
-                    .createMediaSource(uri)
-                exoPlayer.prepare(videoSource)
-                notificationManager.notify(Commons.NOTIFICATION_ID, notification())
-            }
+            if(playbackState == Player.STATE_ENDED) queueAndMetadataAndPlay()
+            Log.e(Commons.TAG, "metadata is: " + metadata.title)
         }
         override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {
         }
@@ -392,17 +398,15 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
             super.onMetadataChanged(metadata)
 
-            metadata?.id?.let {
-                this@MediaPlaybackService.metadata = metadata
-            }
-
         }
+
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onPlaybackStateChanged(playback: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(playback)
 
             playback?.let {
                 this@MediaPlaybackService.playback = it
+
             }
 
             when(playback?.state){
@@ -443,6 +447,55 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                         applicationContext, ACTION_PLAY))) }
 
         }.build() }
+
+    inner class GetBitmap : AsyncTask<String, Void, MutableList<Bitmap>>(){
+        override fun doInBackground(vararg bitmapUris: String?): MutableList<Bitmap> {
+            var inputStream: InputStream? = null
+            val bitmaps : MutableList<Bitmap> = mutableListOf()
+
+            try {
+                val url : URL = URL(bitmapUris.first())
+                val urlConnection : HttpURLConnection = url.openConnection() as HttpURLConnection
+                inputStream = BufferedInputStream(urlConnection.inputStream)
+
+                val bitmapOptions = BitmapFactory.Options()
+                bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888
+                val bitmap = BitmapFactory.decodeStream(inputStream, null, bitmapOptions)
+                bitmaps.add(bitmap!!)
+
+            } catch (e: IOException){
+                return mutableListOf()
+            } finally {
+                inputStream?.close()
+            }
+            return bitmaps
+        }
+        override fun onPostExecute(result: MutableList<Bitmap>) {
+            super.onPostExecute(result)
+            var bitmap : Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            if(!result.isEmpty()) {
+                bitmap = result.first()
+                Log.e(Commons.TAG, "result was not EMPTY")
+            }
+            val data = MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI,
+                    metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI))
+                .putString(MediaMetadataCompat.METADATA_KEY_ART_URI,
+                    metadata.getString(MediaMetadataCompat.METADATA_KEY_ART_URI))
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST,
+                    metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST))
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE,
+                    metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE))
+                .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID,
+                    metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID))
+                .putString(MediaMetadataCompat.METADATA_KEY_GENRE,
+                    metadata.getString(MediaMetadataCompat.METADATA_KEY_GENRE))
+                .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap)
+                .build()
+            metadata = data
+            mediaSession.setMetadata(metadata)
+        }
+    }
 
 }
 
