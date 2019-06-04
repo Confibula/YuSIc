@@ -10,6 +10,7 @@
 
     <item
             android:id="@+id/forward_button"
+            android:visible="false"
             android:title="@string/forward"
             android:icon="@drawable/exo_controls_next"/>
 

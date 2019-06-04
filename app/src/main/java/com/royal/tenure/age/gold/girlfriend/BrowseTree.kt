@@ -19,8 +19,9 @@ class BrowseTree {
             val streamies : MutableList<MediaMetadataCompat>
                     = children[genre] ?: buildStreamies(song)
 
-            streamies.add(song)
-            Log.e(Commons.TAG, "I was here with song: " + song.title)
+            if(streamies.size < 34) {
+                streamies.add(song)
+            }
         }
     }
 

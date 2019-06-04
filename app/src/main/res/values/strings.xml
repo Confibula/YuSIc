@@ -12,6 +12,7 @@
     <string name="ad_id">ca-app-pub-8534808986359666~2554948092</string>
     <string name="banner_id">ca-app-pub-8534808986359666/4788916111</string>
     <string name="test_ad_unit">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="publish_id">pub-8534808986359666</string>
     <string name="apology">
         We are sorry, but we need ads to pay for our Servers that host the music files
     </string>

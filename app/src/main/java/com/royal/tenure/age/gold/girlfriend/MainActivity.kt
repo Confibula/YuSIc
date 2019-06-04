@@ -2,6 +2,7 @@ package com.royal.tenure.age.gold.girlfriend
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.ProgressDialog.show
 import android.content.ClipData
 import android.content.ComponentName
 import android.content.Context
@@ -13,20 +14,28 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import android.content.Intent
 import android.content.Intent.ACTION_PICK
+import android.content.res.Configuration.ORIENTATION_LANDSCAPE
+import android.content.res.Configuration.ORIENTATION_PORTRAIT
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.media.AudioManager
 import android.media.session.PlaybackState
 import android.os.AsyncTask
 import android.os.Bundle
+import android.provider.ContactsContract
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.text.Layout
 import android.view.*
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat.startActivityForResult
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.graphics.scale
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
@@ -38,6 +47,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.Glide.init
+import com.google.ads.consent.*
+import com.google.ads.mediation.admob.AdMobAdapter
 import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.Player
 import com.google.android.gms.ads.AdListener
@@ -46,26 +57,34 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.internal.service.Common
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.auth.User
+import kotlinx.android.synthetic.main.activity_main.*
 import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.lang.ref.WeakReference
 import java.net.HttpURLConnection
+import java.net.MalformedURLException
 import java.net.URL
 import java.util.stream.Stream
 
 class MainActivity : AppCompatActivity() {
-    private val db : FirebaseFirestore = FirebaseFirestore.getInstance()
+    private var db : FirebaseFirestore? = null
     private lateinit var googleSignInClient : GoogleSignInClient
     private lateinit var mediaBrowser : MediaBrowserCompat
     private lateinit var viewModel: StreamModel
     private var metadata : MediaMetadataCompat? = null
     private var analytics : FirebaseAnalytics? = null
+    private var consentInformation: ConsentInformation? = null
+    private var adRequestBuilder: AdRequest.Builder? = null
+    private var form : ConsentForm? = null
+    private var adView: AdView? = null
 
     val controllerCallback = object : MediaControllerCompat.Callback(){
 
@@ -181,6 +200,20 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        analytics = FirebaseAnalytics.getInstance(this)
+        MobileAds.initialize(applicationContext, getString(R.string.ad_id))
+        consentInformation = ConsentInformation.getInstance(this)
+        adRequestBuilder = AdRequest.Builder()
+        db = FirebaseFirestore.getInstance()
+        adView = findViewById(R.id.adView)
+
+        adView?.adListener = object : AdListener() {
+            override fun onAdFailedToLoad(p0: Int) {
+                super.onAdFailedToLoad(p0)
+                Log.e(Commons.TAG, "failed to load: " +  p0)
+            }
+        }
+
         viewModel = ViewModelProviders.of(this).get(StreamModel::class.java)
         setSupportActionBar(findViewById(R.id.toolbar_view))
 
@@ -194,13 +227,13 @@ class MainActivity : AppCompatActivity() {
             })
         }
 
-
-        findViewById<ImageView>(R.id.image_view).also { view ->
-            viewModel.nowPlaying.observe(this@MainActivity, Observer<MediaMetadataCompat> { data ->
-                Log.e(Commons.TAG, "ran observercode for the image with: ")
-                view.setImageBitmap(data.bitmap)
-            })
-        }
+        viewModel.nowPlaying.observe(this@MainActivity, Observer<MediaMetadataCompat> { data ->
+            Log.e(Commons.TAG, "ran observercode for the image with: ")
+            val bitmap = data.bitmap
+            findViewById<ConstraintLayout>(R.id.layout_view_main).apply {
+                background = BitmapDrawable(null, bitmap)
+            }
+        })
 
 
         mediaBrowser = MediaBrowserCompat(this,
@@ -228,68 +261,72 @@ class MainActivity : AppCompatActivity() {
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        analytics = FirebaseAnalytics.getInstance(this)
-        MobileAds.initialize(this, getString(R.string.ad_id))
 
-        val adView = findViewById<AdView>(R.id.adView)
-        val adRequest = AdRequest.Builder().build()
-        adView.loadAd(adRequest)
+        val publisherIds = arrayOf(getString(R.string.publish_id))
+        consentInformation!!.requestConsentInfoUpdate(publisherIds, object : ConsentInfoUpdateListener {
+            override fun onConsentInfoUpdated(consentStatus: ConsentStatus?) {
+                Log.e(Commons.TAG, "userinfo updated: " + consentStatus)
 
-        adView.adListener = object : AdListener(){
-            override fun onAdClicked() {
-                Log.e(Commons.TAG, "I'm in the add")
-                super.onAdClicked()
+                when(consentInformation!!.consentStatus){
+                    ConsentStatus.UNKNOWN -> {
+                        form?.load()
+                    }
+                    ConsentStatus.NON_PERSONALIZED -> {
+                        val bundle = Bundle().apply { putString("npa", "1") }
+                        adView?.loadAd(adRequestBuilder?.addNetworkExtrasBundle(AdMobAdapter::class.java, bundle)!!.build())
+                    }
+                    ConsentStatus.PERSONALIZED -> {
+                        adView?.loadAd(adRequestBuilder?.build())
+                    }
+                    else -> {
+
+                    }
+                }
             }
-
-            override fun onAdClosed() {
-                Log.e(Commons.TAG, "I'm in the add")
-                super.onAdClosed()
+            override fun onFailedToUpdateConsentInfo(reason: String?) {
+                Log.e(Commons.TAG, "userinfo failed to update: " + reason)
             }
+        })
 
-            override fun onAdFailedToLoad(p0: Int) {
-                Log.e(Commons.TAG, "I'm in the add")
-                super.onAdFailedToLoad(p0)
-            }
+        var privacyUrl : URL? = null
+        try { privacyUrl = URL("http://yusic.droppages.com/") }
+        catch (e : Throwable) { Log.e(Commons.TAG, "problem %e ", e) }
 
-            override fun onAdImpression() {
-                Log.e(Commons.TAG, "I'm in the add")
-                super.onAdImpression()
-            }
+        form = ConsentForm.Builder(this@MainActivity, privacyUrl)
+            .withListener(object : ConsentFormListener() {
+                override fun onConsentFormClosed(consentStatus: ConsentStatus?, userPrefersAdFree: Boolean?) {
+                    super.onConsentFormClosed(consentStatus, userPrefersAdFree)
+                    consentInformation?.consentStatus = consentStatus
+                    Log.e(Commons.TAG, "new consentStatus is:" + consentStatus)
+                }
 
-            override fun onAdLeftApplication() {
-                Log.e(Commons.TAG, "I'm in the add")
-                super.onAdLeftApplication()
-            }
+                override fun onConsentFormError(reason: String?) {
+                    super.onConsentFormError(reason)
+                    Log.e(Commons.TAG, "formerror: " + reason)
+                }
 
-            override fun onAdLoaded() {
-                Log.e(Commons.TAG, "I'm in the add")
-                super.onAdLoaded()
-            }
+                override fun onConsentFormLoaded() {
+                    form?.show()
+                    super.onConsentFormLoaded()
+                    Log.e(Commons.TAG, "consent form is loaded!!")
 
-            override fun onAdOpened() {
-                Log.e(Commons.TAG, "I'm in the add")
-                super.onAdOpened()
-            }
-        }
+                }
+                override fun onConsentFormOpened() {
+                    super.onConsentFormOpened()
+                }
+
+            })
+            .withNonPersonalizedAdsOption()
+            .withPersonalizedAdsOption()
+            .build()
 
     }
 
     override fun onStart() {
         super.onStart()
+        connecting()
+        // Todo: Ads-implementation in the future ?
 
-        val consent = getSharedPreferences(Commons.PRIVACY_INFO, Context.MODE_PRIVATE)
-            .getBoolean(Commons.CONSENT_CHOICE, false)
-
-        if(!consent){
-            Log.e(Commons.TAG, "started running consent false code")
-            startActivityForResult(
-                Intent(this, ConsentActivity::class.java),
-                Commons.PRIVACY_REQUEST
-            )
-        }
-        else if(consent){
-            connecting()
-        }
     }
 
     override fun onStop() {

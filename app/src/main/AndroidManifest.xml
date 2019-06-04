@@ -16,8 +16,6 @@
             android:roundIcon="@mipmap/yusic"
             android:supportsRtl="true"
             android:theme="@style/AppTheme">
-        <activity android:name=".ConsentActivity">
-        </activity>
 
         <meta-data
                 android:name="com.google.android.gms.ads.APPLICATION_ID"
@@ -34,6 +32,10 @@
                 <action android:name="android.intent.action.MAIN"/>
 
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PICK"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
 

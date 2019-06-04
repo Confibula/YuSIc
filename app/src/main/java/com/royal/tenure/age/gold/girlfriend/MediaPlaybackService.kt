@@ -86,7 +86,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
             setStyle(androidx.media.app.NotificationCompat.MediaStyle()
                 .setMediaSession(mediaSession.sessionToken)
-                .setShowActionsInCompactView(0)
+                .setShowActionsInCompactView(1)
             )
 
             // Creating the channel
@@ -103,7 +103,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     private fun shouldCreateNowPlayingChannel() =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !nowPlayingChannelExists()
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun nowPlayingChannelExists() =
@@ -145,7 +145,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                             .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
                             .build()
                     metadatas.add(metadata)
-                    Log.e(Commons.TAG, "the metadata was:" + metadata.title)
                 }
 
             }.addOnFailureListener {
@@ -206,10 +205,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 override fun getActiveQueueItemId(player: Player?): Long = 0
 
                 override fun onSkipToPrevious(player: Player?) {
-                    if(controller.repeatMode == PlaybackStateCompat.REPEAT_MODE_NONE){
-                        player!!.repeatMode = Player.REPEAT_MODE_ONE
-                    } else if (controller.repeatMode == PlaybackStateCompat.REPEAT_MODE_ONE){
-                        player!!.repeatMode = Player.REPEAT_MODE_OFF
+                    if(queueInt > 1){
+                        queueInt = queueInt - 2
+                        queueAndMetadataAndPlay()
                     }
                 }
 
@@ -297,6 +295,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             val list = queue(mediaId!!)
             mediaSession.setQueue(list)
             Log.e(Commons.TAG, "metadata was initially set to: " + metadata.title)
+            queueInt = 0
             queueAndMetadataAndPlay()
         }
 
@@ -306,23 +305,20 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
     }
 
+    var queueInt : Int = 28657
+
     fun queueAndMetadataAndPlay(){
-        if(!controller.queue.isEmpty()) {
-            val use = controller.queue.first()
-            val data = metadatas.find {
-                it.id.toLong() == use.queueId }
+        if(queueInt < controller.queue.size){
+            val use = controller.queue[queueInt]
+            val data = metadatas.find { it.id.toLong() == use.queueId }
             metadata = data!!
 
-            val uri = controller.queue.first().description.mediaUri
-            val videoSource = ExtractorMediaSource.Factory(dataFactory)
-                .createMediaSource(uri)
+            val uri = use.description.mediaUri
+            val videoSource = ExtractorMediaSource.Factory(dataFactory).createMediaSource(uri)
             exoPlayer.prepare(videoSource)
-            GetBitmap().execute(metadata.artUri)
-            val list = controller.queue
-            list.removeAt(0)
-            mediaSession.setQueue(list)
+            queueInt++
 
-            notificationManager.notify(Commons.NOTIFICATION_ID, notification())
+            GetBitmap().execute(metadata.artUri)
         }
     }
 
@@ -428,10 +424,19 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         return notificationBuilder.apply {
             setContentText(metadata.title)
             setContentTitle(metadata.artist)
+            setLargeIcon(metadata.bitmap)
 
             Log.e(Commons.TAG, "ran notification creation")
 
             mActions.clear()
+
+            if(playback.isSkipToPreviousEnabled){
+                addAction(NotificationCompat.Action(
+                    R.drawable.exo_controls_previous,
+                    getString(R.string.description),
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        applicationContext, ACTION_SKIP_TO_PREVIOUS))) }
+
             if(playback.isPlaying){
                 addAction(NotificationCompat.Action(
                     R.drawable.exo_controls_pause,
@@ -445,6 +450,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     this@MediaPlaybackService.getString(R.string.play),
                     MediaButtonReceiver.buildMediaButtonPendingIntent(
                         applicationContext, ACTION_PLAY))) }
+
+            if(playback.isSkipToNextEnabled){
+                addAction(NotificationCompat.Action(
+                    R.drawable.exo_controls_next,
+                    getString(R.string.description),
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        applicationContext, ACTION_SKIP_TO_NEXT))) }
+
 
         }.build() }
 
@@ -460,8 +473,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
                 val bitmapOptions = BitmapFactory.Options()
                 bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888
-                val bitmap = BitmapFactory.decodeStream(inputStream, null, bitmapOptions)
-                bitmaps.add(bitmap!!)
+                val bitmap = BitmapFactory.decodeStream(inputStream, null, bitmapOptions)!!
+                bitmaps.add(bitmap)
 
             } catch (e: IOException){
                 return mutableListOf()
@@ -472,10 +485,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
         override fun onPostExecute(result: MutableList<Bitmap>) {
             super.onPostExecute(result)
-            var bitmap : Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            var bitmap : Bitmap? = null
             if(!result.isEmpty()) {
                 bitmap = result.first()
-                Log.e(Commons.TAG, "result was not EMPTY")
             }
             val data = MediaMetadataCompat.Builder()
                 .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI,
@@ -492,8 +504,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     metadata.getString(MediaMetadataCompat.METADATA_KEY_GENRE))
                 .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap)
                 .build()
+
             metadata = data
             mediaSession.setMetadata(metadata)
+            notificationManager.notify(Commons.NOTIFICATION_ID, notification())
         }
     }
 
